@@ -1,0 +1,23 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@{
+    var roles = new[] { "Guest", "Client", "Admin" };
+    var roleCookie = HttpContextAccessor.HttpContext?.Request.Cookies["ImpersonatedRole"];
+    var currentRole = string.IsNullOrEmpty(roleCookie) ? "Guest" : roleCookie;
+}
+
+<form method="post" asp-controller="Auth" asp-action="SwitchRole" style="text-align: right; margin: 10px;">
+    <label for="roleSelect">Role:</label>
+    <select id="roleSelect" name="role" onchange="this.form.submit()">
+        @foreach (var role in roles)
+        {
+            @if (role == currentRole)
+            {
+                <option value="@role" selected>@role</option>
+            }
+            else
+            {
+                <option value="@role">@role</option>
+            }
+        }
+    </select>
+</form>

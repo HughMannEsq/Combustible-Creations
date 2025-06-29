@@ -1,0 +1,16 @@
+﻿@page
+@model AutumnRidgeUSA.Pages.Auth.ConfirmModel
+@{
+    ViewData["Title"] = "Email Confirmation";
+}
+
+<h2>Email Confirmation</h2>
+
+@if (Model.Success)
+{
+    <p style="color: green;">Your email has been confirmed. You can now <a asp-page="/Login">log in</a>.</p>
+}
+else
+{
+    <p style="color: red;">Confirmation failed. The token may be invalid or expired.</p>
+}

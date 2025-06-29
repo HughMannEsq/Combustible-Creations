@@ -1,0 +1,26 @@
+﻿@page
+@model AutumnRidgeUSA.Pages.Auth.RegisterModel
+@{
+    ViewData["Title"] = "Sign Up";
+}
+<h2>Sign Up</h2>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div style="color: green; margin-bottom: 15px;">
+        @Model.StatusMessage
+    </div>
+}
+
+<form method="post">
+    <label>Email</label><br />
+    <input asp-for="Email" type="email" required /><br />
+    <span asp-validation-for="Email" style="color:red;"></span><br />
+
+    <label>Password</label><br />
+    <input asp-for="Password" type="password" required /><br />
+    <span asp-validation-for="Password" style="color:red;"></span><br />
+
+    <span asp-validation-summary="All" style="color:red;"></span><br />
+    <button type="submit">Register</button>
+</form>

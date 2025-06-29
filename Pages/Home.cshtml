@@ -1,0 +1,468 @@
+﻿@page
+@model MyWebsite.Pages.HomeModel
+@{
+    ViewData["Title"] = "Home";
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<style>
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(to bottom right, #FF7E5F, #FEB47B, #FFD194, #FFAEBC, #D291BC);
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+        background-size: cover;
+        font-family: Arial, sans-serif;
+    }
+
+    h1 {
+        color: #4B2E2E;
+        text-align: center;
+        padding-top: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    .content-area {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-top: 2rem;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+    }
+
+    .column {
+        min-height: 400px;
+    }
+
+    .content-item {
+        margin-bottom: 30px;
+        position: relative;
+    }
+
+        .content-item img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+            .content-item img:hover {
+                transform: scale(1.02);
+            }
+
+    .content-text {
+        margin-top: 15px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+        color: #4B2E2E;
+        line-height: 1.6;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+        .content-text:empty:before {
+            content: "Click to add text...";
+            color: #999;
+            font-style: italic;
+        }
+
+    /* Admin-only styles */
+    .admin-controls {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(75, 46, 46, 0.9);
+        padding: 15px;
+        border-radius: 10px;
+        color: white;
+        z-index: 1000;
+    }
+
+    .admin-toggle {
+        background: #FF7E5F;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+
+        .admin-toggle:hover {
+            background: #FF6B47;
+        }
+
+    .drop-zone {
+        border: 3px dashed #ccc;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        margin-bottom: 20px;
+        background: rgba(255, 255, 255, 0.5);
+        transition: all 0.3s ease;
+    }
+
+        .drop-zone.dragover {
+            border-color: #FF7E5F;
+            background: rgba(255, 126, 95, 0.1);
+            transform: scale(1.02);
+        }
+
+    .edit-mode .content-item {
+        border: 2px dashed transparent;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+        .edit-mode .content-item:hover {
+            border-color: #FF7E5F;
+            background: rgba(255, 126, 95, 0.1);
+        }
+
+    .delete-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: #ff4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        display: none;
+        font-size: 16px;
+        line-height: 1;
+    }
+
+    .edit-mode .delete-btn {
+        display: block;
+    }
+
+    .delete-btn:hover {
+        background: #cc0000;
+    }
+
+    .editable-text {
+        min-height: 50px;
+        outline: none;
+        cursor: text;
+    }
+
+    .edit-mode .editable-text {
+        border: 2px solid #FF7E5F;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 0 10px rgba(255, 126, 95, 0.3);
+    }
+
+        .edit-mode .editable-text:hover {
+            border-color: #FF6B47;
+            box-shadow: 0 0 15px rgba(255, 126, 95, 0.5);
+        }
+
+        .edit-mode .editable-text:focus {
+            border-color: #FF5733;
+            box-shadow: 0 0 20px rgba(255, 126, 95, 0.7);
+            background: white;
+        }
+
+        .edit-mode .editable-text:empty:before {
+            content: "Editing enabled";
+            color: #FF7E5F;
+            font-style: italic;
+            opacity: 0.8;
+        }
+
+    .edit-indicator {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: #FF7E5F;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+        display: none;
+        z-index: 10;
+        pointer-events: none; /* Make it non-interactive */
+    }
+
+    .edit-mode .edit-indicator {
+        display: block;
+    }
+
+    .save-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+        width: 100%;
+    }
+
+        .save-btn:hover {
+            background: #218838;
+        }
+
+    media (max-width: 768px) {
+        .content-area
+
+    {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .admin-controls {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    }
+</style>
+
+<h1>Welcome to Autumn Ridge USA</h1>
+
+<div class="container">
+    @if (isAdmin)
+    {
+        <div class="admin-controls">
+            <button class="admin-toggle" onclick="toggleEditMode()">Toggle Edit Mode</button>
+            <button class="save-btn" onclick="saveContent()" style="display: none;" id="saveBtn">Save Changes</button>
+        </div>
+    }
+
+    <div class="content-area" id="contentArea">
+        <div class="column" id="leftColumn">
+            @if (isAdmin)
+            {
+                <div class="drop-zone" ondrop="drop(event, 'left')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                    <p>Drop images here for left column</p>
+                    <input type="file" id="leftFileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event, 'left')">
+                    <button onclick="document.getElementById('leftFileInput').click()" class="admin-toggle">Or Click to Browse</button>
+                </div>
+            }
+
+            <!-- Sample content - replace with dynamic content from database -->
+            <div class="content-item">
+                <img src="/images/sample1.jpg" alt="Sample Image 1" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIFBsYWNlaG9sZGVyPC90ZXh0Pgo8L3N2Zz4='">
+                <div class="content-text editable-text" contenteditable="false" onclick="focusText(this)">
+                    Welcome to our beautiful community at Autumn Ridge USA. Experience the perfect blend of natural beauty and modern convenience.
+                </div>
+                <span class="edit-indicator">CLICK TO EDIT</span>
+                <button class="delete-btn" onclick="deleteItem(this)">×</button>
+            </div>
+        </div>
+
+        <div class="column" id="rightColumn">
+            @if (isAdmin)
+            {
+                <div class="drop-zone" ondrop="drop(event, 'right')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                    <p>Drop images here for right column</p>
+                    <input type="file" id="rightFileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event, 'right')">
+                    <button onclick="document.getElementById('rightFileInput').click()" class="admin-toggle">Or Click to Browse</button>
+                </div>
+            }
+
+            <!-- Sample content - replace with dynamic content from database -->
+            <div class="content-item">
+                <img src="/images/sample2.jpg" alt="Sample Image 2" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIFBsYWNlaG9sZGVyPC90ZXh0Pgo8L3N2Zz4='">
+                <div class="content-text editable-text" contenteditable="false" onclick="focusText(this)">
+                    Discover our amenities and community features that make Autumn Ridge USA the perfect place to call home.
+                </div>
+                <span class="edit-indicator">CLICK TO EDIT</span>
+                <button class="delete-btn" onclick="deleteItem(this)">×</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isAdmin)
+{
+    <script>
+        let editMode = false;
+        let contentChanged = false;
+
+        function toggleEditMode() {
+            editMode = !editMode;
+            const contentArea = document.getElementById('contentArea');
+            const saveBtn = document.getElementById('saveBtn');
+            const editableTexts = document.querySelectorAll('.editable-text');
+
+            if (editMode) {
+                contentArea.classList.add('edit-mode');
+                saveBtn.style.display = 'block';
+                editableTexts.forEach(text => {
+                    text.contentEditable = 'true';
+                    text.addEventListener('input', () => contentChanged = true);
+                });
+            } else {
+                contentArea.classList.remove('edit-mode');
+                saveBtn.style.display = 'none';
+                editableTexts.forEach(text => {
+                    text.contentEditable = 'false';
+                });
+            }
+        }
+
+        function focusText(element) {
+            if (editMode && element.contentEditable === 'true') {
+                element.focus();
+                // Place cursor at end of text
+                const range = document.createRange();
+                const selection = window.getSelection();
+                range.selectNodeContents(element);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.target.closest('.drop-zone').classList.add('dragover');
+        }
+
+        function dragLeave(ev) {
+            ev.target.closest('.drop-zone').classList.remove('dragover');
+        }
+
+        function drop(ev, column) {
+            ev.preventDefault();
+            ev.target.closest('.drop-zone').classList.remove('dragover');
+
+            const files = ev.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files, column);
+            }
+        }
+
+        function handleFileSelect(ev, column) {
+            handleFiles(ev.target.files, column);
+        }
+
+        function handleFiles(files, column) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        addContentItem(e.target.result, column, 'Click to add description...');
+                        contentChanged = true;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function addContentItem(imageSrc, column, text) {
+            const columnElement = document.getElementById(column + 'Column');
+            const dropZone = columnElement.querySelector('.drop-zone');
+
+            const contentItem = document.createElement('div');
+            contentItem.className = 'content-item';
+            contentItem.innerHTML = `
+                <img src="${imageSrc}" alt="Uploaded Image">
+                <div class="content-text editable-text" contenteditable="${editMode}" onclick="focusText(this)">${text}</div>
+                <span class="edit-indicator">CLICK TO EDIT</span>
+                <button class="delete-btn" onclick="deleteItem(this)">×</button>
+            `;
+
+            columnElement.insertBefore(contentItem, dropZone.nextSibling);
+
+            if (editMode) {
+                const textElement = contentItem.querySelector('.editable-text');
+                textElement.addEventListener('input', () => contentChanged = true);
+                // Auto-focus the new text area
+                setTimeout(() => focusText(textElement), 100);
+            }
+        }
+
+        function deleteItem(btn) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                btn.parentElement.remove();
+                contentChanged = true;
+            }
+        }
+
+        function saveContent() {
+            if (!contentChanged) {
+                alert('No changes to save.');
+                return;
+            }
+
+            // Collect all content data
+            const leftItems = collectColumnData('leftColumn');
+            const rightItems = collectColumnData('rightColumn');
+
+            const contentData = {
+                leftColumn: leftItems,
+                rightColumn: rightItems
+            };
+
+            // Send to server (you'll need to implement the endpoint)
+            fetch('/api/home/save-content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(contentData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Content saved successfully!');
+                    contentChanged = false;
+                } else {
+                    alert('Error saving content: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error saving content.');
+            });
+        }
+
+        function collectColumnData(columnId) {
+            const column = document.getElementById(columnId);
+            const items = column.querySelectorAll('.content-item');
+
+            return Array.from(items).map(item => {
+                const img = item.querySelector('img');
+                const text = item.querySelector('.editable-text');
+
+                return {
+                    imageSrc: img.src,
+                    imageAlt: img.alt,
+                    text: text.textContent.trim()
+                };
+            });
+        }
+
+        // Warn about unsaved changes
+        window.addEventListener('beforeunload', function(e) {
+            if (contentChanged) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+}

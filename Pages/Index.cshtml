@@ -1,0 +1,21 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Welcome to Autumn Ridge";
+}
+
+
+<h1>Welcome to Autumn Ridge USA</h1>
+<p>This is the home page for the site.</p>
+
+
+<div class="container mt-4">
+    <div class="card shadow p-4">
+
+        <h1>Welcome to My Website</h1>
+        <p>This is the public home page.</p>
+        <p>Today is: @DateTime.Now.ToString("D")</p> <!-- Shows today's date -->
+        <p class="lead">This site uses Razor Pages and Bootstrap to make development easier and faster.</p>
+        <a class="btn btn-primary btn-lg" asp-page="/About">Learn more</a>
+    </div>
+</div>

@@ -1,0 +1,51 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+
+@{
+    var request = HttpContextAccessor.HttpContext?.Request;
+    var path = request?.Path.Value?.ToLower() ?? "/";
+    var isLocalhost = request?.Host.Host.ToLower().Contains("localhost") ?? false;
+
+    var links = new Dictionary<string, string>
+    {
+        { "Home", "home.autumnridgeusa.com" },
+        { "Storage", "storage.autumnridgeusa.com" },
+        { "Contracting", "contracting.autumnridgeusa.com" },
+        { "Real Estate", "realestate.autumnridgeusa.com" },
+        { "Residential", "residential.autumnridgeusa.com" }
+    };
+
+    string GetLinkUrl(string key)
+    {
+        if (isLocalhost)
+        {
+            var slug = key.ToLower().Replace(" ", "");
+            return slug == "home" ? "/" : $"/{slug}";
+        }
+        return $"https://{links[key]}";
+    }
+
+    string GetLocalSection(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path == "/")
+            return "home";
+
+        var section = path.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return section ?? "home";
+    }
+
+    var currentSection = GetLocalSection(path);
+}
+
+<nav style="background-color: #333; padding: 10px; text-align: center;">
+    @foreach (var link in links)
+    {
+        var key = link.Key;
+        var section = key.ToLower().Replace(" ", "");
+        var isCurrent = currentSection == section;
+
+        if (!isCurrent)
+        {
+            <a href="@GetLinkUrl(key)" style="color: white; margin: 0 15px;">@key</a>
+        }
+    }
+</nav>

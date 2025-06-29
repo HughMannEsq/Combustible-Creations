@@ -1,0 +1,50 @@
+﻿@page
+@model AutumnRidgeUSA.Pages.Admin.ClientsModel
+@{
+    ViewData["Title"] = "Client Database";
+}
+
+<h2>Client Database</h2>
+
+<table id="clientsTable" style="width: 100%; border-collapse: collapse;">
+    <thead style="background-color: #f2f2f2;">
+        <tr>
+            <th style="border: 1px solid #ddd; padding: 8px;">RAAID</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">First Name</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">Last Name</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">Email</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">Phone</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">Signup Date</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">Balance</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var client in Model.Clients)
+        {
+            <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">@client.Raaid</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">@client.FirstName</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">@client.LastName</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">@client.Email</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">@client.PhoneNumber</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">@client.SignupDate.ToShortDateString()</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">@client.Balance.ToString("C")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <!-- jQuery and DataTables -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+
+    <script>
+        $(document).ready(function () {
+            $('#clientsTable').DataTable({
+                "order": [[5, "desc"]] // Default sort by Signup Date (6th column, index 5)
+            });
+        });
+    </script>
+}

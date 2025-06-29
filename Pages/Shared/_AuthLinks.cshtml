@@ -1,0 +1,23 @@
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@{
+    // Read role from impersonation cookie
+    var role = HttpContextAccessor.HttpContext?.Request.Cookies["ImpersonatedRole"] ?? "Guest";
+}
+<div style="text-align: right; margin: 10px;">
+    @if (role == "Admin")
+    {
+        <a asp-page="Admin/Clients">Client Database</a>
+    
+    <a asp-page = "/Logout" > Log out</a>
+    }
+    else if (role == "Client")
+    {
+        <a asp-page="/Logout">Log out</a>
+    }
+    else
+    {
+        <a asp-page="/Register">Sign up</a>
+    
+    <a asp - page = "/Login" > Log in</a>
+    }
+</div>
