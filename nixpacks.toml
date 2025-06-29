@@ -1,0 +1,8 @@
+﻿[providers]
+dotnet = "8.*"
+
+[build]
+buildCmd = "dotnet publish -c Release -o out"
+
+[start] 
+cmd = "dotnet out/AutumnRidgeUSA.dll"
