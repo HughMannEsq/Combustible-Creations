@@ -1,8 +1,10 @@
-﻿[providers]
-dotnet = "8.*"
+﻿providers = ["dotnet"]
 
-[build]
-buildCmd = "dotnet publish -c Release -o out"
+[phases.setup]
+nixPkgs = ["dotnet-sdk_8"]
 
-[start] 
+[phases.build]
+cmds = ["dotnet publish -c Release -o out"]
+
+[phases.start]
 cmd = "dotnet out/AutumnRidgeUSA.dll"
