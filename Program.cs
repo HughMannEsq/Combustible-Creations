@@ -5,8 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container - ALL services must be added BEFORE builder.Build()
+// Railway port configuration - Railway sets PORT environment variable
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
+// Add services to the container - ALL services must be added BEFORE builder.Build()
 // Database configuration - environment-specific
 if (builder.Environment.IsDevelopment())
 {
@@ -16,9 +19,10 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    // Use Azure SQL Database for production
+    // For Railway production, use SQLite (Railway supports file storage)
+    // Use relative path that works in Railway's file system
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("AzureConnection")));
+        options.UseSqlite("Data Source=./app.db"));
 }
 
 builder.Services.AddHttpContextAccessor();
@@ -31,36 +35,29 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 // Build the app AFTER all services are registered
 var app = builder.Build();
 
-// Database initialization - different approach for Azure
-if (app.Environment.IsDevelopment())
+// Database initialization - Railway-friendly approach
+using (var scope = app.Services.CreateScope())
 {
-    // For development, ensure database is created
-    using (var scope = app.Services.CreateScope())
-    {
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        context.Database.EnsureCreated();
-    }
-}
-else
-{
-    // For production, use migrations instead of EnsureCreated
-    using (var scope = app.Services.CreateScope())
-    {
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        // Only apply pending migrations - don't create/recreate database
-        context.Database.Migrate();
-    }
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // Always use EnsureCreated for SQLite on Railway
+    context.Database.EnsureCreated();
 }
 
 // Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // Railway handles HTTPS at the load balancer level, so don't force HTTPS redirect
+    // app.UseHttpsRedirection(); // Commented out for Railway
+    // The default HSTS value is 30 days. You may want to change this for production scenarios.
     app.UseHsts();
 }
+else
+{
+    // Only use HTTPS redirect in development
+    app.UseHttpsRedirection();
+}
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
