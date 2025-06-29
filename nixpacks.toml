@@ -1,8 +1,0 @@
-﻿[providers]
-dotnet = {}
-
-[build]
-buildCmd = "dotnet publish -c Release -o out"
-
-[start]
-cmd = "dotnet out/AutumnRidgeUSA.dll"
