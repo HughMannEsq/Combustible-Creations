@@ -1,5 +1,6 @@
 ﻿@import url('https://fonts.googleapis.com/css2?family=Agency+FB:wght@400;700&display=swap');
 
+/* Company Header Styles */
 .company-header {
     background-color: #1e3a5f; /* Dark blue background */
     width: 100%;
@@ -24,33 +25,7 @@
     text-transform: uppercase;
 }
 
-/* Ensure no margin/padding conflicts */
-body {
-    margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f5f5f5;
-}
-
-/* Update existing navigation to work with new header */
-.navigation {
-    background-color: #4a4a4a;
-    padding: 0;
-    margin: 0;
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-    .company-name {
-        font-size: 36px;
-        letter-spacing: 1px;
-    }
-
-    .company-header {
-        padding: 15px 0;
-    }
-}
-
+/* Base Styles */
 * {
     margin: 0;
     padding: 0;
@@ -58,64 +33,17 @@ body {
 }
 
 body {
+    margin: 0;
+    padding: 0;
     font-family: Arial, sans-serif;
     background-color: #f5f5f5;
 }
 
-.header {
-    background: linear-gradient(135deg, #8B4513 0%, #CD853F 100%);
-    padding: 10px 0;
-    position: relative;
-    overflow: hidden;
-}
-
-    .header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
-    }
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    position: relative;
-    z-index: 2;
-}
-
-.logo {
-    color: #FF6B35;
-    font-size: 28px;
-    font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-}
-
-.auth-links {
-    display: flex;
-    gap: 20px;
-}
-
-    .auth-links a {
-        color: #FFD700;
-        text-decoration: none;
-        font-weight: bold;
-        transition: color 0.3s;
-    }
-
-        .auth-links a:hover {
-            color: #FFF;
-        }
-
+/* Navigation Styles */
 .navigation {
     background-color: #4a4a4a;
     padding: 0;
+    margin: 0;
 }
 
 .nav-content {
@@ -148,18 +76,34 @@ body {
             background-color: #666;
         }
 
+        .nav-menu a.active {
+            background-color: #666;
+            color: #FFD700;
+        }
+
 .search-container {
     margin-left: auto;
     padding: 10px 20px;
 }
+
+    .search-container form {
+        margin: 0;
+    }
 
 .search-input {
     padding: 8px 12px;
     border: none;
     border-radius: 4px;
     width: 200px;
+    font-size: 14px;
 }
 
+    .search-input:focus {
+        outline: none;
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    }
+
+/* Main Layout */
 .main-container {
     display: flex;
     max-width: 1200px;
@@ -167,6 +111,7 @@ body {
     min-height: calc(100vh - 120px);
 }
 
+/* Sidebar Styles */
 .sidebar {
     width: 200px;
     background: linear-gradient(135deg, #228B22 0%, #32CD32 100%);
@@ -267,6 +212,7 @@ body {
         transform: rotate(90deg);
     }
 
+/* Content Area */
 .content-area {
     flex: 1;
     background-color: #F5F5DC;
@@ -347,7 +293,17 @@ body {
         background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
     }
 
+/* Responsive Design */
 @media (max-width: 768px) {
+    .company-name {
+        font-size: 36px;
+        letter-spacing: 1px;
+    }
+
+    .company-header {
+        padding: 15px 0;
+    }
+
     .main-container {
         flex-direction: column;
     }
@@ -364,82 +320,3 @@ body {
         display: none;
     }
 }
-@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
-@{
-    var request = HttpContextAccessor.HttpContext?.Request;
-    var path = request?.Path.Value?.ToLower() ?? "/";
-    var isLocalhost = request?.Host.Host.ToLower().Contains("localhost") ?? false;
-    
-    // Updated navigation links for the banner
-    var bannerLinks = new Dictionary<string, string>
-    {
-        { "Our Mission", "/Mission" },
-        { "Contact Us", "/Contact" },
-        { "About Us", "/About" }
-    };
-    
-    string GetLinkUrl(string path)
-    {
-        if (isLocalhost)
-        {
-            return path;
-        }
-        // For production, you might want to adjust these URLs based on your domain structure
-        return path;
-    }
-    
-    string GetLocalSection(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || path == "/")
-            return "home";
-        var section = path.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        return section ?? "home";
-    }
-    
-    var currentSection = GetLocalSection(path);
-}
-
-<nav class="navigation">
-    <div class="nav-content">
-        <ul class="nav-menu">
-            @foreach (var link in bannerLinks)
-            {
-                var key = link.Key;
-                var url = GetLinkUrl(link.Value);
-                var section = link.Value.TrimStart('/').ToLower();
-                var isCurrent = currentSection == section;
-                
-                <li>
-                    <a href="@url" class="@(isCurrent ? "active" : "")">@key</a>
-                </li>
-            }
-</ul >
-<div class="search-container" >
-<form method="get" action="/search" style="display: inline;" >
-<input type="text" name="q" class="search-input" placeholder="Search" / >
-</form >
-</div >
-</div >
-</nav >
-/* Add this to your existing home.css file */
-.nav-menu a.active {
-    background-color: #666;
-    color: #FFD700;
-}
-
-.search-container form {
-    margin: 0;
-}
-
-.search-input {
-    padding: 8px 12px;
-    border: none;
-    border-radius: 4px;
-    width: 200px;
-    font-size: 14px;
-}
-
-    .search-input:focus {
-        outline: none;
-        box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-    }
