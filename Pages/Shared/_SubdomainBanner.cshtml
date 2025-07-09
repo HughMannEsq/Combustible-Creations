@@ -1,34 +1,31 @@
 ﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
-
 @{
     var request = HttpContextAccessor.HttpContext?.Request;
     var path = request?.Path.Value?.ToLower() ?? "/";
     var isLocalhost = request?.Host.Host.ToLower().Contains("localhost") ?? false;
 
-    var links = new Dictionary<string, string>
+    // Updated navigation links for the banner
+    var bannerLinks = new Dictionary<string, string>
     {
-        { "Home", "home.autumnridgeusa.com" },
-        { "Storage", "storage.autumnridgeusa.com" },
-        { "Contracting", "contracting.autumnridgeusa.com" },
-        { "Real Estate", "realestate.autumnridgeusa.com" },
-        { "Residential", "residential.autumnridgeusa.com" }
+        { "Our Mission", "/Mission" },
+        { "Contact Us", "/Contact" },
+        { "About Us", "/About" }
     };
 
-    string GetLinkUrl(string key)
+    string GetLinkUrl(string path)
     {
         if (isLocalhost)
         {
-            var slug = key.ToLower().Replace(" ", "");
-            return slug == "home" ? "/" : $"/{slug}";
+            return path;
         }
-        return $"https://{links[key]}";
+        // For production, you might want to adjust these URLs based on your domain structure
+        return path;
     }
 
     string GetLocalSection(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || path == "/")
             return "home";
-
         var section = path.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         return section ?? "home";
     }
@@ -36,16 +33,25 @@
     var currentSection = GetLocalSection(path);
 }
 
-<nav style="background-color: #333; padding: 10px; text-align: center;">
-    @foreach (var link in links)
-    {
-        var key = link.Key;
-        var section = key.ToLower().Replace(" ", "");
-        var isCurrent = currentSection == section;
+<nav class="navigation">
+    <div class="nav-content">
+        <ul class="nav-menu">
+            @foreach (var link in bannerLinks)
+            {
+                var key = link.Key;
+                var url = GetLinkUrl(link.Value);
+                var section = link.Value.TrimStart('/').ToLower();
+                var isCurrent = currentSection == section;
 
-        if (!isCurrent)
-        {
-            <a href="@GetLinkUrl(key)" style="color: white; margin: 0 15px;">@key</a>
-        }
-    }
+                <li>
+                    <a href="@url" class="@(isCurrent ? "active" : "")">@key</a>
+                </li>
+            }
+        </ul>
+        <div class="search-container">
+            <form method="get" action="/search" style="display: inline;">
+                <input type="text" name="q" class="search-input" placeholder="Search" />
+            </form>
+        </div>
+    </div>
 </nav>

@@ -311,3 +311,82 @@ body {
         display: none;
     }
 }
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+@{
+    var request = HttpContextAccessor.HttpContext?.Request;
+    var path = request?.Path.Value?.ToLower() ?? "/";
+    var isLocalhost = request?.Host.Host.ToLower().Contains("localhost") ?? false;
+    
+    // Updated navigation links for the banner
+    var bannerLinks = new Dictionary<string, string>
+    {
+        { "Our Mission", "/Mission" },
+        { "Contact Us", "/Contact" },
+        { "About Us", "/About" }
+    };
+    
+    string GetLinkUrl(string path)
+    {
+        if (isLocalhost)
+        {
+            return path;
+        }
+        // For production, you might want to adjust these URLs based on your domain structure
+        return path;
+    }
+    
+    string GetLocalSection(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || path == "/")
+            return "home";
+        var section = path.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return section ?? "home";
+    }
+    
+    var currentSection = GetLocalSection(path);
+}
+
+<nav class="navigation">
+    <div class="nav-content">
+        <ul class="nav-menu">
+            @foreach (var link in bannerLinks)
+            {
+                var key = link.Key;
+                var url = GetLinkUrl(link.Value);
+                var section = link.Value.TrimStart('/').ToLower();
+                var isCurrent = currentSection == section;
+                
+                <li>
+                    <a href="@url" class="@(isCurrent ? "active" : "")">@key</a>
+                </li>
+            }
+</ul >
+<div class="search-container" >
+<form method="get" action="/search" style="display: inline;" >
+<input type="text" name="q" class="search-input" placeholder="Search" / >
+</form >
+</div >
+</div >
+</nav >
+/* Add this to your existing home.css file */
+.nav-menu a.active {
+    background-color: #666;
+    color: #FFD700;
+}
+
+.search-container form {
+    margin: 0;
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    width: 200px;
+    font-size: 14px;
+}
+
+    .search-input:focus {
+        outline: none;
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    }
