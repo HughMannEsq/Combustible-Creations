@@ -13,14 +13,9 @@
     <link rel="stylesheet" href="~/css/home.css" />
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <div class="logo">Autumn Ridge LLC</div>
-            <div class="auth-links">
-                <a href="/Account/Register">Sign Up</a>
-                <span style="color: #FFD700;">|</span>
-                <a href="/Account/Login">Log In</a>
-            </div>
+    <header class="company-header">
+        <div class="company-header-content">
+            <h1 class="company-name">Autumn Ridge LLC</h1>
         </div>
     </header>
 
@@ -32,7 +27,9 @@
                 <li><a href="/About">About Us</a></li>
             </ul>
             <div class="search-container">
-                <input type="text" class="search-input" placeholder="Search">
+                <form method="get" action="/search" style="display: inline;">
+                    <input type="text" name="q" class="search-input" placeholder="Search" />
+                </form>
             </div>
         </div>
     </nav>
