@@ -1,107 +1,42 @@
-﻿@page
-@model AutumnRidgeUSA.Pages.HomeModel
-@{
-    ViewData["Title"] = "Home - Autumn Ridge LLC";
-}
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TEST - @ViewData["Title"]</title>
-    <link rel="stylesheet" href="~/css/home.css" />
-</head>
-<body>
-    <header class="company-header">
-        <div class="company-header-content">
-            <h1 class="company-name">RAILWAY TEST 12345</h1>
+﻿<!-- Add this to your Home.cshtml, just before the closing </body> tag -->
+<!-- Signup Modal -->
+<div id="signupModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Sign Up</h2>
+            <span class="close">&times;</span>
         </div>
-    </header>
+        <div class="modal-body">
+            <form id="signupForm">
+                <div class="form-group">
+                    <label for="firstName">First Name:</label>
+                    <input type="text" id="firstName" name="firstName" required>
+                </div>
 
-    <nav class="navigation">
-        <div class="nav-content">
-            <ul class="nav-menu">
-                <li><a href="/Mission">Our Mission</a></li>
-                <li><a href="/Contact">Contact Us</a></li>
-                <li><a href="/About">About Us</a></li>
-            </ul>
-            <div class="search-container">
-                <form method="get" action="/search" style="display: inline;">
-                    <input type="text" name="q" class="search-input" placeholder="Search" />
-                </form>
-            </div>
+                <div class="form-group">
+                    <label for="lastName">Last Name:</label>
+                    <input type="text" id="lastName" name="lastName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+                <div id="successMessage" class="success-message" style="display: none;"></div>
+
+                <div class="form-actions">
+                    <button type="button" id="cancelBtn" class="btn-cancel">Cancel</button>
+                    <button type="submit" id="submitBtn" class="btn-submit">Sign Up</button>
+                </div>
+            </form>
         </div>
-    </nav>
-
-    <div class="main-container">
-        <aside class="sidebar">
-            <div class="sidebar-content">
-                <h2 onclick="toggleVentures()" id="venturesHeader">
-                    Our Ventures
-                    <span class="ventures-toggle" id="venturesToggle">▶</span>
-                </h2>
-                <ul class="ventures-list" id="venturesList">
-                    <li><a href="https://realestate.autumnridge.com">Real Estate</a></li>
-                    <li><a href="https://storage.autumnridge.com">Storage Units</a></li>
-                    <li><a href="https://contracting.autumnridge.com">Contracting</a></li>
-                </ul>
-            </div>
-        </aside>
-
-        <main class="content-area">
-            <div class="role-dropdown">
-                <select id="roleSelect">
-                    <option value="">Select Role</option>
-                    <option value="admin">Administrator</option>
-                    <option value="editor">Editor</option>
-                    <option value="viewer">Viewer</option>
-                </select>
-            </div>
-
-            <div class="content-grid">
-                <div class="content-box">
-                    <div class="placeholder-icon">🖼️</div>
-                    <h3>Image Placeholder</h3>
-                    <p>This area is reserved for images. You can upload and display images here to showcase your content.</p>
-                </div>
-
-                <div class="content-box">
-                    <div class="placeholder-icon">📝</div>
-                    <h3>Text Content</h3>
-                    <p>This section can contain text content, descriptions, or any other textual information you'd like to display.</p>
-                </div>
-
-                <div class="content-box">
-                    <div class="placeholder-icon">🖼️</div>
-                    <h3>Image Placeholder</h3>
-                    <p>Another area for images. Perfect for galleries, product photos, or any visual content.</p>
-                </div>
-
-                <div class="content-box">
-                    <div class="placeholder-icon">📝</div>
-                    <h3>Text Content</h3>
-                    <p>Additional text content area. Use this space for detailed descriptions, articles, or any written content.</p>
-                </div>
-            </div>
-        </main>
-
-        <div class="right-accent"></div>
     </div>
+</div>
 
-    <script>
-        function toggleVentures() {
-            const venturesList = document.getElementById('venturesList');
-            const venturesToggle = document.getElementById('venturesToggle');
-
-            venturesList.classList.toggle('expanded');
-            venturesToggle.classList.toggle('expanded');
-        }
-
-        document.getElementById('roleSelect').addEventListener('change', function() {
-            console.log('Role selected:', this.value);
-            // Add your role-specific logic here
-        });
-    </script>
-</body>
-</html>
+<!-- Update your existing Sign Up link -->
+<!-- Change this line in your header: -->
+<!-- <a href="/Account/Register">Sign Up</a> -->
+<!-- To this: -->
+<!-- <a href="#" id="signupLink">Sign Up</a> -->

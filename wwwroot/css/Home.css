@@ -323,3 +323,37 @@ body {
         display: none;
     }
 }
+<div id="signupModal" class="modal" >
+<div class="modal-content" >
+<div class="modal-header" >
+<h2 > Sign Up</h2 >
+<span class="close" > &times;</span >
+</div >
+<div class="modal-body" >
+<form id="signupForm" >
+<div class="form-group" >
+<label for="firstName" > First Name:</label >
+<input type="text" id="firstName" name="firstName" required >
+</div >
+
+<div class="form-group" >
+<label for="lastName" > Last Name:</label >
+<input type="text" id="lastName" name="lastName" required >
+</div >
+
+<div class="form-group" >
+<label for="email" > Email Address:</label >
+<input type="email" id="email" name="email" required >
+</div >
+
+<div id="errorMessage" class="error-message" style="display: none;" > </div >
+<div id="successMessage" class="success-message" style="display: none;" > </div >
+
+<div class="form-actions" >
+<button type="button" id="cancelBtn" class="btn-cancel" > Cancel</button >
+<button type="submit" id="submitBtn" class="btn-submit" > Sign Up</button >
+</div >
+</form >
+</div >
+</div >
+</div >

@@ -1,8 +1,28 @@
 ﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 @{
     var request = HttpContextAccessor.HttpContext?.Request;
+    var host = request?.Host.Host.ToLower() ?? "";
     var path = request?.Path.Value?.ToLower() ?? "/";
-    var isLocalhost = request?.Host.Host.ToLower().Contains("localhost") ?? false;
+    var isLocalhost = host.Contains("localhost");
+
+    // Check if this is a subdomain (not the main domain)
+    var isSubdomain = false;
+
+    if (!isLocalhost)
+    {
+        // For production: check if it's a subdomain
+        // Examples: storage.autumnridge.com, realestate.autumnridge.com
+        var parts = host.Split('.');
+        isSubdomain = parts.Length > 2 && !host.StartsWith("www.");
+    }
+    else
+    {
+        // For localhost: check if URL path indicates subdomain simulation
+        // Examples: localhost/storage, localhost/realestate
+        var pathSegments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var subdomainPaths = new[] { "storage", "realestate", "contracting", "residential" };
+        isSubdomain = pathSegments.Length > 0 && subdomainPaths.Contains(pathSegments[0]);
+    }
 
     // Updated navigation links for the banner
     var bannerLinks = new Dictionary<string, string>
@@ -18,7 +38,6 @@
         {
             return path;
         }
-        // For production, you might want to adjust these URLs based on your domain structure
         return path;
     }
 
@@ -33,25 +52,28 @@
     var currentSection = GetLocalSection(path);
 }
 
-<nav class="navigation">
-    <div class="nav-content">
-        <ul class="nav-menu">
-            @foreach (var link in bannerLinks)
-            {
-                var key = link.Key;
-                var url = GetLinkUrl(link.Value);
-                var section = link.Value.TrimStart('/').ToLower();
-                var isCurrent = currentSection == section;
-
-                <li>
-                    <a href="@url" class="@(isCurrent ? "active" : "")">@key</a>
-                </li>
-            }
-        </ul>
-        <div class="search-container">
-            <form method="get" action="/search" style="display: inline;">
-                <input type="text" name="q" class="search-input" placeholder="Search" />
-            </form>
+@* Only show this banner on subdomains *@
+@if (isSubdomain)
+{
+    <nav class="navigation">
+        <div class="nav-content">
+            <ul class="nav-menu">
+                @foreach (var link in bannerLinks)
+                {
+                    var key = link.Key;
+                    var url = GetLinkUrl(link.Value);
+                    var section = link.Value.TrimStart('/').ToLower();
+                    var isCurrent = currentSection == section;
+                    <li>
+                        <a href="@url" class="@(isCurrent ? "active" : "")">@key</a>
+                    </li>
+                }
+            </ul>
+            <div class="search-container">
+                <form method="get" action="/search" style="display: inline;">
+                    <input type="text" name="q" class="search-input" placeholder="Search" />
+                </form>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
+}
