@@ -1,33 +1,5 @@
 ﻿@import url('https://fonts.googleapis.com/css2?family=Agency+FB:wght@400;700&display=swap');
 
-body {
-    background-color: red !important;
-}
-
-.company-header {
-    background-color: #1e3a5f; /* Dark blue background */
-    width: 100%;
-    padding: 20px 0;
-    margin: 0;
-}
-
-.company-header-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    text-align: center;
-}
-
-.company-name {
-    font-family: 'Agency FB', Arial, sans-serif;
-    font-size: 48px;
-    font-weight: 700;
-    color: #8B4513; /* Dark burnt orange */
-    margin: 0;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
 /* Base Styles */
 * {
     margin: 0;
@@ -42,18 +14,77 @@ body {
     background-color: #f5f5f5;
 }
 
-/* Navigation Styles */
+/* Header container - spans full width */
+.header-container {
+    display: flex;
+    height: 80px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Left third - Company branding with blue background */
+.company-branding {
+    flex: 1;
+    background-color: #1e3a5f; /* Dark blue background (using your existing color) */
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+    .company-branding .company-name {
+        font-family: 'Agency FB', Arial, sans-serif;
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #8B4513; /* Dark burnt orange (using your existing color) */
+        margin: 0;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+/* Right two-thirds - Auth links and navigation */
+.header-right {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    background-color: #4a4a4a; /* Gray background (using your existing color) */
+}
+
+/* Auth links styling */
+.auth-links {
+    padding: 10px 20px;
+    text-align: right;
+    background-color: #1e3a5f; /* Same blue as branding */
+}
+
+    .auth-links a {
+        color: #FFD700; /* Gold color */
+        text-decoration: none;
+        margin: 0 5px;
+        font-weight: bold;
+    }
+
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+
+/* Navigation styling */
 .navigation {
-    background-color: #4a4a4a;
-    padding: 0;
-    margin: 0;
+    flex: 1;
+    background-color: #4a4a4a; /* Gray background */
+    display: flex;
+    align-items: center;
 }
 
 .nav-content {
     display: flex;
-    max-width: 1200px;
-    margin: 0 auto;
+    justify-content: space-between;
     align-items: center;
+    width: 100%;
+    padding: 0 20px;
 }
 
 .nav-menu {
@@ -61,32 +92,34 @@ body {
     list-style: none;
     margin: 0;
     padding: 0;
+    gap: 0;
 }
 
     .nav-menu li {
         margin: 0;
     }
 
-    .nav-menu a {
-        display: block;
-        color: white;
-        text-decoration: none;
-        padding: 15px 20px;
-        transition: background-color 0.3s;
-    }
-
-        .nav-menu a:hover {
-            background-color: #666;
+        .nav-menu li a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 15px 20px;
+            transition: background-color 0.3s;
         }
 
-        .nav-menu a.active {
-            background-color: #666;
-            color: #FFD700;
-        }
+            .nav-menu li a:hover {
+                background-color: #666;
+            }
 
+            .nav-menu li a.active {
+                background-color: #666;
+                color: #FFD700;
+            }
+
+/* Search container */
 .search-container {
-    margin-left: auto;
-    padding: 10px 20px;
+    display: flex;
+    align-items: center;
 }
 
     .search-container form {
@@ -97,8 +130,8 @@ body {
     padding: 8px 12px;
     border: none;
     border-radius: 4px;
-    width: 200px;
     font-size: 14px;
+    width: 200px;
 }
 
     .search-input:focus {
@@ -106,123 +139,45 @@ body {
         box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
     }
 
-/* Main Layout */
+/* Main container */
 .main-container {
     display: flex;
     max-width: 1200px;
     margin: 0 auto;
-    min-height: calc(100vh - 120px);
+    min-height: calc(100vh - 80px); /* Subtract header height */
+    background-color: #f5f5f5;
 }
 
-/* Sidebar Styles */
-.sidebar {
-    width: 200px;
-    background: linear-gradient(135deg, #228B22 0%, #32CD32 100%);
-    position: relative;
-    overflow: hidden;
-}
-
-    .sidebar::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(-45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
-    }
-
-.sidebar-content {
-    position: relative;
-    z-index: 2;
-    padding: 20px;
-}
-
-.sidebar h2 {
-    color: #FFD700;
-    font-size: 24px;
-    margin-bottom: 20px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    cursor: pointer;
-    transition: color 0.3s;
-}
-
-    .sidebar h2:hover {
-        color: #FFF;
-    }
-
-.ventures-list {
-    list-style: none;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-}
-
-    .ventures-list.expanded {
-        max-height: 300px;
-        transition: max-height 0.5s ease-in;
-    }
-
-    .ventures-list li {
-        margin-bottom: 8px;
-        opacity: 0;
-        transform: translateX(-20px);
-        transition: all 0.3s ease;
-    }
-
-    .ventures-list.expanded li {
-        opacity: 1;
-        transform: translateX(0);
-    }
-
-        .ventures-list.expanded li:nth-child(1) {
-            transition-delay: 0.1s;
-        }
-
-        .ventures-list.expanded li:nth-child(2) {
-            transition-delay: 0.2s;
-        }
-
-        .ventures-list.expanded li:nth-child(3) {
-            transition-delay: 0.3s;
-        }
-
-    .ventures-list a {
-        color: white;
-        text-decoration: none;
-        display: block;
-        padding: 12px 16px;
-        border-radius: 4px;
-        transition: all 0.3s;
-        background-color: rgba(255,255,255,0.1);
-        margin-left: 10px;
-        border-left: 3px solid transparent;
-    }
-
-        .ventures-list a:hover {
-            background-color: rgba(255,255,255,0.2);
-            border-left-color: #FFD700;
-            transform: translateX(5px);
-        }
-
-.ventures-toggle {
-    display: inline-block;
-    margin-left: 10px;
-    transition: transform 0.3s;
-}
-
-    .ventures-toggle.expanded {
-        transform: rotate(90deg);
-    }
-
-/* Content Area */
+/* Content area - now takes full width */
 .content-area {
     flex: 1;
-    background-color: #F5F5DC;
+    background-color: #F5F5DC; /* Using your existing beige color */
     padding: 40px;
     position: relative;
 }
 
+/* Role dropdown */
+.role-dropdown {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+    .role-dropdown select {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        font-size: 14px;
+    }
+
+        .role-dropdown select:focus {
+            outline: none;
+            border-color: #1e3a5f;
+            box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2);
+        }
+
+/* Content grid */
 .content-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -248,70 +203,193 @@ body {
         border-color: #999;
     }
 
-    .content-box h3 {
-        color: #666;
-        margin-bottom: 15px;
-        font-size: 18px;
-    }
-
-    .content-box p {
-        color: #888;
-        line-height: 1.6;
-    }
-
 .placeholder-icon {
     font-size: 48px;
     color: #ddd;
     margin-bottom: 20px;
 }
 
-.role-dropdown {
-    position: absolute;
-    top: 20px;
-    right: 20px;
+.content-box h3 {
+    color: #666;
+    margin: 0 0 15px 0;
+    font-size: 18px;
 }
 
-    .role-dropdown select {
-        padding: 8px 12px;
+.content-box p {
+    color: #888;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    background-color: #1e3a5f;
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+.close {
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+    .close:hover {
+        opacity: 0.7;
+    }
+
+.modal-body {
+    padding: 20px;
+}
+
+/* Form styles */
+.form-group {
+    margin-bottom: 15px;
+}
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 10px;
         border: 1px solid #ccc;
         border-radius: 4px;
-        background-color: white;
         font-size: 14px;
+        box-sizing: border-box;
     }
 
-.right-accent {
-    width: 100px;
-    background: linear-gradient(135deg, #FF6B35 0%, #FF8C69 100%);
-    position: relative;
-    overflow: hidden;
+        .form-group input:focus {
+            outline: none;
+            border-color: #1e3a5f;
+            box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2);
+        }
+
+/* Message styles */
+.error-message {
+    background-color: #fee;
+    border: 1px solid #fcc;
+    color: #c33;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
 }
 
-    .right-accent::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%);
+.success-message {
+    background-color: #efe;
+    border: 1px solid #cfc;
+    color: #3c3;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+/* Form actions */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-cancel {
+    background-color: #6b7280;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+    .btn-cancel:hover {
+        background-color: #4b5563;
     }
 
-/* Responsive Design */
+.btn-submit {
+    background-color: #1e3a5f;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+    .btn-submit:hover {
+        background-color: #1e40af;
+    }
+
+    .btn-submit:disabled {
+        background-color: #9ca3af;
+        cursor: not-allowed;
+    }
+
+/* Responsive design */
 @media (max-width: 768px) {
-    .company-name {
-        font-size: 36px;
-        letter-spacing: 1px;
-    }
-
-    .company-header {
-        padding: 15px 0;
-    }
-
-    .main-container {
+    .header-container {
         flex-direction: column;
+        height: auto;
     }
 
-    .sidebar {
+    .company-branding {
+        padding: 15px 20px;
+    }
+
+        .company-branding .company-name {
+            font-size: 2rem;
+        }
+
+    .nav-content {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px 20px;
+    }
+
+    .nav-menu {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .search-input {
         width: 100%;
     }
 
@@ -319,41 +397,7 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .right-accent {
-        display: none;
+    .main-container {
+        min-height: calc(100vh - 120px);
     }
 }
-<div id="signupModal" class="modal" >
-<div class="modal-content" >
-<div class="modal-header" >
-<h2 > Sign Up</h2 >
-<span class="close" > &times;</span >
-</div >
-<div class="modal-body" >
-<form id="signupForm" >
-<div class="form-group" >
-<label for="firstName" > First Name:</label >
-<input type="text" id="firstName" name="firstName" required >
-</div >
-
-<div class="form-group" >
-<label for="lastName" > Last Name:</label >
-<input type="text" id="lastName" name="lastName" required >
-</div >
-
-<div class="form-group" >
-<label for="email" > Email Address:</label >
-<input type="email" id="email" name="email" required >
-</div >
-
-<div id="errorMessage" class="error-message" style="display: none;" > </div >
-<div id="successMessage" class="success-message" style="display: none;" > </div >
-
-<div class="form-actions" >
-<button type="button" id="cancelBtn" class="btn-cancel" > Cancel</button >
-<button type="submit" id="submitBtn" class="btn-submit" > Sign Up</button >
-</div >
-</form >
-</div >
-</div >
-</div >
