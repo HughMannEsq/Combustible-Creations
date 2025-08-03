@@ -41,6 +41,7 @@ namespace AutumnRidgeUSA.Controllers
                 {
                     // Check if last name matches but first name doesn't
                     var sameLastName = existingUsers.Any(u =>
+                        !string.IsNullOrEmpty(u.LastName) && !string.IsNullOrEmpty(u.FirstName) &&
                         u.LastName.ToLower() == request.LastName.ToLower().Trim() &&
                         u.FirstName.ToLower() != request.FirstName.ToLower().Trim());
 
@@ -52,6 +53,7 @@ namespace AutumnRidgeUSA.Controllers
                             FirstName = request.FirstName.Trim(),
                             LastName = request.LastName.Trim(),
                             Email = normalizedEmail,
+                            PasswordHash = "TempPassword123", // You'll want to implement proper password hashing
                             CreatedAt = DateTime.UtcNow
                         };
 
@@ -73,6 +75,7 @@ namespace AutumnRidgeUSA.Controllers
                     FirstName = request.FirstName.Trim(),
                     LastName = request.LastName.Trim(),
                     Email = normalizedEmail,
+                    PasswordHash = "TempPassword123", // You'll want to implement proper password hashing
                     CreatedAt = DateTime.UtcNow
                 };
 
