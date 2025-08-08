@@ -48,9 +48,9 @@
             <div class="role-dropdown">
                 <select id="roleSelect">
                     <option value="">Select Role</option>
-                    <option value="admin">Administrator</option>
-                    <option value="editor">Editor</option>
-                    <option value="viewer">Viewer</option>
+                    <option value="Guest">Guest</option>
+                    <option value="Client">Client</option>
+                    <option value="Admin">Admin</option>
                 </select>
             </div>
 
@@ -120,8 +120,30 @@
         }
 
         document.getElementById('roleSelect').addEventListener('change', function() {
-            console.log('Role selected:', this.value);
-            // Add your role-specific logic here
+            const selectedRole = this.value;
+            console.log('Role selected:', selectedRole);
+
+            if (selectedRole) {
+                // Call the AuthController to switch roles
+                fetch('/Auth/SwitchRole', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `role=${encodeURIComponent(selectedRole)}`
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Reload the page to reflect the new role
+                        window.location.reload();
+                    } else {
+                        console.error('Failed to switch role');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error switching role:', error);
+                });
+            }
         });
 
         // Modal functionality
