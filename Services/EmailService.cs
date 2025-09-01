@@ -6,6 +6,7 @@ namespace AutumnRidgeUSA.Services
     public interface IEmailService
     {
         Task SendConfirmationEmailAsync(string toEmail, string confirmationUrl);
+        Task SendVerificationEmailAsync(string email, string name, string verificationLink); // ADD THIS LINE
         Task SendEmailAsync(string toEmail, string subject, string body);
     }
 
@@ -38,6 +39,28 @@ namespace AutumnRidgeUSA.Services
                 </html>";
 
             await SendEmailAsync(toEmail, subject, body);
+        }
+
+        // ADD THIS NEW METHOD
+        public async Task SendVerificationEmailAsync(string email, string name, string verificationLink)
+        {
+            var subject = "Complete Your Registration - Autumn Ridge USA";
+            var body = $@"
+                <html>
+                <body>
+                    <h2>Hello {name}!</h2>
+                    <p>Thank you for starting your registration with Autumn Ridge USA. To complete your account setup, please click the link below:</p>
+                    <p><a href='{verificationLink}' style='background-color: #1e3a5f; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Complete Registration</a></p>
+                    <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                    <p>{verificationLink}</p>
+                    <p><strong>Important:</strong> This link will expire in 1 hour for security reasons.</p>
+                    <p>If you didn't start this registration, please ignore this email.</p>
+                    <br>
+                    <p>Best regards,<br>Autumn Ridge USA Team</p>
+                </body>
+                </html>";
+
+            await SendEmailAsync(email, subject, body);
         }
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)

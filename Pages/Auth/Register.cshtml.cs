@@ -23,6 +23,14 @@ namespace AutumnRidgeUSA.Pages.Auth
 
         [BindProperty]
         [Required]
+        public string FirstName { get; set; } = string.Empty;
+
+        [BindProperty]
+        [Required]
+        public string LastName { get; set; } = string.Empty;
+
+        [BindProperty]
+        [Required]
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
@@ -54,36 +62,38 @@ namespace AutumnRidgeUSA.Pages.Auth
                 return Page();
             }
 
-            // Create new user
-            var user = new User
+            // Check if there's already a temp signup for this email
+            var existingTemp = await _context.TempSignups.FirstOrDefaultAsync(t => t.Email == Email);
+            if (existingTemp != null)
             {
+                _context.TempSignups.Remove(existingTemp); // Remove old temp record
+            }
+
+            // Create temp signup record (no password yet)
+            var tempSignup = new TempSignup
+            {
+                FirstName = FirstName,
+                LastName = LastName,
                 Email = Email,
-                PasswordHash = HashPassword(Password),
-                ConfirmationToken = GenerateConfirmationToken(),
-                IsConfirmed = false,
-                CreatedAt = DateTime.UtcNow
+                VerificationToken = GenerateConfirmationToken(),
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddHours(1)
             };
 
-            _context.Users.Add(user);
+            _context.TempSignups.Add(tempSignup);
             await _context.SaveChangesAsync();
 
             try
             {
-                // Generate confirmation URL
-                var confirmationUrl = Url.Page("/Auth/Confirm", pageHandler: null,
-                    values: new { token = user.ConfirmationToken }, protocol: Request.Scheme);
+                // Send verification email to complete registration
+                var completeUrl = $"{Request.Scheme}://{Request.Host}/Auth/CompleteRegistration?token={tempSignup.VerificationToken}";
 
-                // Send confirmation email
-                await _emailService.SendConfirmationEmailAsync(user.Email, confirmationUrl!);
-
-                StatusMessage = "Registration successful! Please check your email for a confirmation link.";
+                await _emailService.SendVerificationEmailAsync(Email, $"{FirstName} {LastName}", completeUrl!);
+                StatusMessage = "Please check your email for a link to complete your registration.";
             }
             catch (Exception ex)
             {
-                // Log the error but don't fail the registration
-                // In production, you might want to handle this differently
-                StatusMessage = $"Registration successful! However, there was an issue sending the confirmation email. " +
-                              $"Please contact support. Error: {ex.Message}";
+                StatusMessage = $"Error sending email: {ex.Message}";
             }
 
             return RedirectToPage("/Auth/Register");

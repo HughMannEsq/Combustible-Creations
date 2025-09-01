@@ -4,12 +4,23 @@
     ViewData["Title"] = "Client Database";
 }
 
-<h2>Client Database</h2>
+<div style="background-color: #f8f9fa; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+    <nav style="display: flex; gap: 20px; align-items: center;">
+        <h3 style="margin: 0; color: #495057;">Admin Dashboard</h3>
+        <a href="/Admin/Clients" style="text-decoration: none; padding: 8px 15px; background-color: #007bff; color: white; border-radius: 4px;">
+            Client Database
+        </a>
+        <a href="/Admin/TempSignups" style="text-decoration: none; padding: 8px 15px; background-color: #6c757d; color: white; border-radius: 4px;">
+            Temp Signups
+        </a>
+    </nav>
+</div>
 
+<h2>Client Database</h2>
 <table id="clientsTable" style="width: 100%; border-collapse: collapse;">
     <thead style="background-color: #f2f2f2;">
         <tr>
-            <th style="border: 1px solid #ddd; padding: 8px;">RAAID</th>
+            <th style="border: 1px solid #ddd; padding: 8px;">UserId</th>
             <th style="border: 1px solid #ddd; padding: 8px;">First Name</th>
             <th style="border: 1px solid #ddd; padding: 8px;">Last Name</th>
             <th style="border: 1px solid #ddd; padding: 8px;">Email</th>
@@ -22,7 +33,7 @@
         @foreach (var client in Model.Clients)
         {
             <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;">@client.Raaid</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">@client.UserId</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">@client.FirstName</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">@client.LastName</td>
                 <td style="border: 1px solid #ddd; padding: 8px;">@client.Email</td>
@@ -39,7 +50,6 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
-
     <script>
         $(document).ready(function () {
             $('#clientsTable').DataTable({

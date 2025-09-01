@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Data;
 using AutumnRidgeUSA.Models;
+using AutumnRidgeUSA.Services;
 
 namespace AutumnRidgeUSA.Controllers
 {
@@ -10,10 +11,12 @@ namespace AutumnRidgeUSA.Controllers
     public class SignupController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public SignupController(AppDbContext context)
+        public SignupController(AppDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         [HttpPost("signup")]
@@ -32,57 +35,44 @@ namespace AutumnRidgeUSA.Controllers
                 // Normalize email for comparison
                 var normalizedEmail = request.Email.ToLower().Trim();
 
-                // Check if email already exists
-                var existingUsers = await _context.Users
-                    .Where(u => u.Email.ToLower() == normalizedEmail)
-                    .ToListAsync();
-
-                if (existingUsers.Any())
+                // Check if user already exists
+                if (await _context.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail))
                 {
-                    // Check if last name matches but first name doesn't
-                    var sameLastName = existingUsers.Any(u =>
-                        !string.IsNullOrEmpty(u.LastName) && !string.IsNullOrEmpty(u.FirstName) &&
-                        u.LastName.ToLower() == request.LastName.ToLower().Trim() &&
-                        u.FirstName.ToLower() != request.FirstName.ToLower().Trim());
-
-                    if (sameLastName)
-                    {
-                        // Allow this signup (husband/wife scenario)
-                        var newUser = new User
-                        {
-                            FirstName = request.FirstName.Trim(),
-                            LastName = request.LastName.Trim(),
-                            Email = normalizedEmail,
-                            PasswordHash = "TempPassword123", // You'll want to implement proper password hashing
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        _context.Users.Add(newUser);
-                        await _context.SaveChangesAsync();
-
-                        return Ok(new { message = "Account created successfully!" });
-                    }
-                    else
-                    {
-                        // Email exists and either same first name or different last name
-                        return BadRequest(new { message = "An account with this email address already exists." });
-                    }
+                    return BadRequest(new { message = "An account with this email address already exists." });
                 }
 
-                // Email doesn't exist, create new user
-                var user = new User
+                // Check if there's already a temp signup for this email and remove it
+                var existingTemp = await _context.TempSignups
+                    .FirstOrDefaultAsync(t => t.Email.ToLower() == normalizedEmail);
+                if (existingTemp != null)
+                {
+                    _context.TempSignups.Remove(existingTemp);
+                }
+
+                // Create temporary signup record
+                var token = Guid.NewGuid().ToString("N");
+                var tempSignup = new TempSignup
                 {
                     FirstName = request.FirstName.Trim(),
                     LastName = request.LastName.Trim(),
                     Email = normalizedEmail,
-                    PasswordHash = "TempPassword123", // You'll want to implement proper password hashing
-                    CreatedAt = DateTime.UtcNow
+                    VerificationToken = token,
+                    CreatedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1)
                 };
 
-                _context.Users.Add(user);
+                _context.TempSignups.Add(tempSignup);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Account created successfully!" });
+                // Send verification email
+                var verificationLink = $"{Request.Scheme}://{Request.Host}/Auth/CompleteRegistration?token={token}";
+                await _emailService.SendVerificationEmailAsync(
+                    normalizedEmail,
+                    $"{request.FirstName} {request.LastName}",
+                    verificationLink
+                );
+
+                return Ok(new { message = "Verification email sent. Please check your inbox to complete registration." });
             }
             catch (Exception ex)
             {

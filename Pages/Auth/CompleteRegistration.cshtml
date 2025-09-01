@@ -1,0 +1,61 @@
+﻿@page
+@model AutumnRidgeUSA.Pages.Auth.CompleteRegistrationModel
+@{
+    ViewData["Title"] = "Complete Registration";
+}
+
+<h2>Complete Your Registration</h2>
+
+<form method="post">
+    <input type="hidden" asp-for="Token" />
+
+    <!-- Pre-filled from temp signup (readonly) -->
+    <div class="form-group">
+        <label asp-for="FirstName">First Name</label>
+        <input asp-for="FirstName" readonly class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="LastName">Last Name</label>
+        <input asp-for="LastName" readonly class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Email">Email</label>
+        <input asp-for="Email" readonly class="form-control" />
+    </div>
+
+    <!-- Password (required) -->
+    <div class="form-group">
+        <label asp-for="Password">Password</label>
+        <input asp-for="Password" type="password" class="form-control" required />
+    </div>
+
+    <!-- Additional fields -->
+    <div class="form-group">
+        <label asp-for="Phone">Phone Number</label>
+        <input asp-for="Phone" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Address">Address</label>
+        <input asp-for="Address" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="City">City</label>
+        <input asp-for="City" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="State">State</label>
+        <input asp-for="State" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="ZipCode">Zip Code</label>
+        <input asp-for="ZipCode" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Complete Registration</button>
+</form>

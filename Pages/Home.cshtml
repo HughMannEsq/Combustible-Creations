@@ -1,8 +1,10 @@
 ﻿@page
 @model AutumnRidgeUSA.Pages.HomeModel
 @{
+    // Set the page title that appears in browser tab
     ViewData["Title"] = "Home - Autumn Ridge LLC";
-    Layout = null; // This prevents the layout from being applied
+    // Disable the shared _Layout.cshtml to prevent duplicate headers/navigation
+    Layout = null;
 }
 
 <!DOCTYPE html>
@@ -11,28 +13,59 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"]</title>
+    <!-- Link to our custom CSS file for home page styling -->
     <link rel="stylesheet" href="~/css/home.css" />
 </head>
 <body>
+    <!-- HEADER SECTION: Contains company branding and navigation -->
     <div class="header-container">
+        <!-- LEFT THIRD: Company branding with blue background -->
         <div class="company-branding">
             <h1 class="company-name">Autumn Ridge LLC</h1>
         </div>
 
+        <!-- RIGHT TWO-THIRDS: Authentication links and navigation menu -->
         <div class="header-right">
+            <!-- DYNAMIC AUTH LINKS: Change based on user's current role -->
             <div class="auth-links">
-                <a href="#" id="signupLink">Sign Up</a>
-                <span style="color: #FFD700;">|</span>
-                <a href="/Account/Login">Log In</a>
+                @{
+                    // Read the role cookie set by AuthController (defaults to Guest if no cookie)
+                    string currentRole = Request.Cookies["ImpersonatedRole"] ?? "Guest";
+                }
+
+                @* GUEST VIEW: Show signup and login options *@
+                @if (currentRole == "Guest")
+                {
+                    <a href="#" id="signupLink">Sign Up</a>
+                    <span style="color: #FFD700;">|</span>
+                    <a href="/Account/Login">Log In</a>
+                }
+                @* CLIENT VIEW: Show account management and logout *@
+                else if (currentRole == "Client")
+                {
+                    <a href="/Account/MyAccounts">My Accounts</a>
+                    <span style="color: #FFD700;">|</span>
+                    <a href="/Account/Logout">Log Out</a>
+                }
+                @* ADMIN VIEW: Show dashboard access and logout *@
+                else if (currentRole == "Admin")
+                {
+                    <a href="/Admin/Dashboard">Dashboard</a>
+                    <span style="color: #FFD700;">|</span>
+                    <a href="/Account/Logout">Log Out</a>
+                }
             </div>
 
+            <!-- MAIN NAVIGATION: Site-wide navigation menu and search -->
             <nav class="navigation">
                 <div class="nav-content">
+                    <!-- Navigation menu items -->
                     <ul class="nav-menu">
                         <li><a href="/Mission">Our Mission</a></li>
                         <li><a href="/Contact">Contact Us</a></li>
                         <li><a href="/About">About Us</a></li>
                     </ul>
+                    <!-- Search functionality -->
                     <div class="search-container">
                         <form method="get" action="/search" style="display: inline;">
                             <input type="text" name="q" class="search-input" placeholder="Search" />
@@ -43,8 +76,10 @@
         </div>
     </div>
 
+    <!-- MAIN CONTENT SECTION -->
     <div class="main-container">
         <main class="content-area">
+            <!-- ROLE SWITCHER: Dropdown for testing different user roles (development tool) -->
             <div class="role-dropdown">
                 <select id="roleSelect">
                     <option value="">Select Role</option>
@@ -54,6 +89,7 @@
                 </select>
             </div>
 
+            <!-- CONTENT GRID: Placeholder content boxes for future development -->
             <div class="content-grid">
                 <div class="content-box">
                     <div class="placeholder-icon">🖼️</div>
@@ -82,29 +118,36 @@
         </main>
     </div>
 
-    <!-- Signup Modal -->
+    <!-- SIGNUP MODAL: Only visible/functional when user is in Guest role -->
     <div id="signupModal" class="modal">
         <div class="modal-content">
+            <!-- Modal header with title and close button -->
             <div class="modal-header">
                 <h2>Sign Up</h2>
                 <span class="close">&times;</span>
             </div>
+            <!-- Modal form content -->
             <div class="modal-body">
                 <form id="signupForm">
+                    <!-- First name input field -->
                     <div class="form-group">
                         <label for="firstName">First Name:</label>
                         <input type="text" id="firstName" name="firstName" required>
                     </div>
+                    <!-- Last name input field -->
                     <div class="form-group">
                         <label for="lastName">Last Name:</label>
                         <input type="text" id="lastName" name="lastName" required>
                     </div>
+                    <!-- Email input field -->
                     <div class="form-group">
                         <label for="email">Email Address:</label>
                         <input type="email" id="email" name="email" required>
                     </div>
+                    <!-- Dynamic message containers (hidden by default) -->
                     <div id="errorMessage" class="error-message" style="display: none;"></div>
                     <div id="successMessage" class="success-message" style="display: none;"></div>
+                    <!-- Form action buttons -->
                     <div class="form-actions">
                         <button type="button" id="cancelBtn" class="btn-cancel">Cancel</button>
                         <button type="submit" id="submitBtn" class="btn-submit">Sign Up</button>
@@ -115,26 +158,31 @@
     </div>
 
     <script>
+        // LEGACY FUNCTION: No longer used but kept to prevent JS errors
         function toggleVentures() {
-            // This function is no longer needed but kept to avoid JS errors
+            // This function was for the old sidebar "Our Ventures" dropdown
+            // Kept empty to avoid errors if referenced elsewhere
         }
 
+        // ROLE SWITCHER FUNCTIONALITY: Handles dropdown role selection
         document.getElementById('roleSelect').addEventListener('change', function() {
             const selectedRole = this.value;
             console.log('Role selected:', selectedRole);
 
+            // If a role is selected, call the server to switch roles
             if (selectedRole) {
-                // Call the AuthController to switch roles
+                // Make POST request to AuthController to set role cookie
                 fetch('/Auth/SwitchRole', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
+                    // Send role as form data
                     body: `role=${encodeURIComponent(selectedRole)}`
                 })
                 .then(response => {
                     if (response.ok) {
-                        // Reload the page to reflect the new role
+                        // Reload page to show new role-specific UI
                         window.location.reload();
                     } else {
                         console.error('Failed to switch role');
@@ -146,113 +194,123 @@
             }
         });
 
-        // Modal functionality
+        // SIGNUP MODAL FUNCTIONALITY: Handles modal display and form submission
         document.addEventListener('DOMContentLoaded', function() {
             const modal = document.getElementById('signupModal');
             const signupLink = document.getElementById('signupLink');
-            const closeBtn = document.querySelector('.close');
-            const cancelBtn = document.getElementById('cancelBtn');
-            const form = document.getElementById('signupForm');
-            const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
 
-            // Open modal
-            signupLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                modal.style.display = 'block';
-                document.body.style.overflow = 'hidden'; // Prevent background scrolling
-            });
+            // Only attach modal functionality if signup link exists (Guest role only)
+            // This prevents JS errors when viewing as Client/Admin
+            if (signupLink) {
+                const closeBtn = document.querySelector('.close');
+                const cancelBtn = document.getElementById('cancelBtn');
+                const form = document.getElementById('signupForm');
+                const errorMessage = document.getElementById('errorMessage');
+                const successMessage = document.getElementById('successMessage');
 
-            // Close modal
-            function closeModal() {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-                form.reset();
-                hideMessages();
-            }
+                // MODAL DISPLAY: Open modal when signup link is clicked
+                signupLink.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevent default link behavior
+                    modal.style.display = 'block';
+                    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+                });
 
-            closeBtn.addEventListener('click', closeModal);
-            cancelBtn.addEventListener('click', closeModal);
-
-            // Close modal when clicking outside
-            window.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-
-            // Hide messages
-            function hideMessages() {
-                errorMessage.style.display = 'none';
-                successMessage.style.display = 'none';
-            }
-
-            // Show error message
-            function showError(message) {
-                hideMessages();
-                errorMessage.textContent = message;
-                errorMessage.style.display = 'block';
-            }
-
-            // Show success message
-            function showSuccess(message) {
-                hideMessages();
-                successMessage.textContent = message;
-                successMessage.style.display = 'block';
-            }
-
-            // Form submission
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                const firstName = document.getElementById('firstName').value.trim();
-                const lastName = document.getElementById('lastName').value.trim();
-                const email = document.getElementById('email').value.trim();
-
-                // Basic validation
-                if (!firstName || !lastName || !email) {
-                    showError('Please fill in all fields.');
-                    return;
+                // MODAL CLOSING: Function to hide modal and reset form
+                function closeModal() {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = 'auto'; // Restore scrolling
+                    form.reset(); // Clear form fields
+                    hideMessages(); // Hide any error/success messages
                 }
 
-                // Disable submit button during processing
-                const submitBtn = document.getElementById('submitBtn');
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Processing...';
+                // Attach close functionality to close button and cancel button
+                closeBtn.addEventListener('click', closeModal);
+                cancelBtn.addEventListener('click', closeModal);
 
-                try {
-                    // Send signup request to server
-                    const response = await fetch('/api/signup', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            firstName: firstName,
-                            lastName: lastName,
-                            email: email
-                        })
-                    });
-
-                    const result = await response.json();
-
-                    if (response.ok) {
-                        showSuccess('Account created successfully! You can now log in.');
-                        form.reset();
-                        // Optionally close modal after a delay
-                        setTimeout(closeModal, 2000);
-                    } else {
-                        showError(result.message || 'An error occurred during signup.');
+                // Close modal when clicking outside the modal content
+                window.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeModal();
                     }
-                } catch (error) {
-                    showError('Network error. Please try again.');
-                    console.error('Signup error:', error);
-                } finally {
-                    // Re-enable submit button
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Sign Up';
+                });
+
+                // MESSAGE MANAGEMENT FUNCTIONS
+                function hideMessages() {
+                    errorMessage.style.display = 'none';
+                    successMessage.style.display = 'none';
                 }
-            });
+
+                function showError(message) {
+                    hideMessages();
+                    errorMessage.textContent = message;
+                    errorMessage.style.display = 'block';
+                }
+
+                function showSuccess(message) {
+                    hideMessages();
+                    successMessage.textContent = message;
+                    successMessage.style.display = 'block';
+                }
+
+                // FORM SUBMISSION: Handle signup form submission
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault(); // Prevent default form submission
+
+                    // Get and validate form data
+                    const firstName = document.getElementById('firstName').value.trim();
+                    const lastName = document.getElementById('lastName').value.trim();
+                    const email = document.getElementById('email').value.trim();
+
+                    // CLIENT-SIDE VALIDATION: Check for empty fields
+                    if (!firstName || !lastName || !email) {
+                        showError('Please fill in all fields.');
+                        return;
+                    }
+
+                    // UI FEEDBACK: Disable submit button during processing
+                    const submitBtn = document.getElementById('submitBtn');
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Processing...';
+
+                    try {
+                        // API CALL: Send signup data to server
+                        const response = await fetch('/api/signup', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            // Send user data as JSON
+                            body: JSON.stringify({
+                                firstName: firstName,
+                                lastName: lastName,
+                                email: email
+                            })
+                        });
+
+                        // Parse server response
+                        const result = await response.json();
+
+                        // HANDLE RESPONSE: Success or error from server
+                        if (response.ok) {
+                            showSuccess('Account created successfully! You can now log in.');
+                            form.reset();
+                            // Auto-close modal after 2 seconds on success
+                            setTimeout(closeModal, 2000);
+                        } else {
+                            // Show server error message or generic error
+                            showError(result.message || 'An error occurred during signup.');
+                        }
+                    } catch (error) {
+                        // NETWORK ERROR: Handle connection/network issues
+                        showError('Network error. Please try again.');
+                        console.error('Signup error:', error);
+                    } finally {
+                        // CLEANUP: Re-enable submit button regardless of outcome
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Sign Up';
+                    }
+                });
+            }
         });
     </script>
 </body>
