@@ -39,5 +39,8 @@ namespace AutumnRidgeUSA.Models.Shared
         // Optional: Full name property for convenience
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}".Trim();
+
+        [NotMapped]
+        public string Divisions { get; set; } = string.Empty;
     }
 }

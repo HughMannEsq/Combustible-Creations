@@ -16,6 +16,8 @@ namespace AutumnRidgeUSA.Data
         public DbSet<StorageClient> StorageClients { get; set; } = null!;
         public DbSet<TempSignup> TempSignups { get; set; } = null!;
 
+        public DbSet<Division> Divisions { get; set; }
+        public DbSet<UserDivision> UserDivisions { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Configure User entity
@@ -39,6 +41,31 @@ namespace AutumnRidgeUSA.Data
                 entity.Property(e => e.LastName).HasMaxLength(50);
                 entity.Property(e => e.UserId).HasMaxLength(20);
             });
+
+            // Division configurations
+            modelBuilder.Entity<UserDivision>()
+                .HasOne(ud => ud.User)
+                .WithMany(u => u.UserDivisions)
+                .HasForeignKey(ud => ud.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserDivision>()
+                .HasOne(ud => ud.Division)
+                .WithMany(d => d.UserDivisions)
+                .HasForeignKey(ud => ud.DivisionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Prevent duplicate user-division pairs
+            modelBuilder.Entity<UserDivision>()
+                .HasIndex(ud => new { ud.UserId, ud.DivisionId })
+                .IsUnique();
+
+            // Seed initial divisions
+            modelBuilder.Entity<Division>().HasData(
+                new Division { Id = 1, Name = "Storage", Description = "Storage facility services", IsActive = true },
+                new Division { Id = 2, Name = "Contracting", Description = "Construction and renovation services", IsActive = true },
+                new Division { Id = 3, Name = "Real Estate", Description = "Property management and sales", IsActive = true }
+            );
 
             base.OnModelCreating(modelBuilder);
         }

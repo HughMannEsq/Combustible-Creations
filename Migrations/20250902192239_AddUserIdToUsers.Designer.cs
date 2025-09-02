@@ -3,6 +3,7 @@ using System;
 using AutumnRidgeUSA.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,58 +11,13 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AutumnRidgeUSA.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250902192239_AddUserIdToUsers")]
+    partial class AddUserIdToUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.36");
-
-            modelBuilder.Entity("AutumnRidgeUSA.Models.Division", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Divisions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Description = "Storage facility services",
-                            IsActive = true,
-                            Name = "Storage"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Description = "Construction and renovation services",
-                            IsActive = true,
-                            Name = "Contracting"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Description = "Property management and sales",
-                            IsActive = true,
-                            Name = "Real Estate"
-                        });
-                });
 
             modelBuilder.Entity("AutumnRidgeUSA.Models.Shared.Client", b =>
                 {
@@ -236,34 +192,6 @@ namespace AutumnRidgeUSA.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("AutumnRidgeUSA.Models.UserDivision", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("ContractedDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("DivisionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DivisionId");
-
-                    b.HasIndex("UserId", "DivisionId")
-                        .IsUnique();
-
-                    b.ToTable("UserDivisions");
-                });
-
             modelBuilder.Entity("AutumnRidgeUSA.Models.Storage.StorageClient", b =>
                 {
                     b.HasBaseType("AutumnRidgeUSA.Models.Shared.Client");
@@ -279,35 +207,6 @@ namespace AutumnRidgeUSA.Migrations
                         .HasColumnType("REAL");
 
                     b.HasDiscriminator().HasValue("StorageClient");
-                });
-
-            modelBuilder.Entity("AutumnRidgeUSA.Models.UserDivision", b =>
-                {
-                    b.HasOne("AutumnRidgeUSA.Models.Division", "Division")
-                        .WithMany("UserDivisions")
-                        .HasForeignKey("DivisionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("AutumnRidgeUSA.Models.User", "User")
-                        .WithMany("UserDivisions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Division");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("AutumnRidgeUSA.Models.Division", b =>
-                {
-                    b.Navigation("UserDivisions");
-                });
-
-            modelBuilder.Entity("AutumnRidgeUSA.Models.User", b =>
-                {
-                    b.Navigation("UserDivisions");
                 });
 #pragma warning restore 612, 618
         }

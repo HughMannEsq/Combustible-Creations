@@ -22,6 +22,8 @@ namespace AutumnRidgeUSA.Models
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
+        public ICollection<UserDivision> UserDivisions { get; set; } = new List<UserDivision>();
+
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
@@ -58,6 +60,20 @@ namespace AutumnRidgeUSA.Models
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}".Trim();
 
+        [NotMapped]
+        public string DivisionsText
+        {
+            get
+            {
+                var activeDivisions = UserDivisions?
+                    .Where(ud => ud.IsActive && ud.Division.IsActive)
+                    .Select(ud => ud.Division.Name)
+                    .OrderBy(name => name)
+                    .ToList() ?? new List<string>();
+
+                return activeDivisions.Any() ? string.Join(", ", activeDivisions) : "None";
+            }
+        }
         [NotMapped]
         public string FullAddress
         {
