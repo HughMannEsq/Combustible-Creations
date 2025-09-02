@@ -11,13 +11,20 @@ namespace AutumnRidgeUSA.Pages.Admin
 
         public IActionResult OnGet()
         {
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            // ROLE CHECKING FIX: Changed from claims-based to cookie-based role checking
+            // OLD (didn't work): var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            // NEW (matches your home page system): Read from the cookie set by AuthController
+            var role = Request.Cookies["ImpersonatedRole"] ?? "Guest";
+
+            // Check if user has Admin role - if not, redirect to home page
             if (role != "Admin")
             {
-                return Unauthorized(); // Or RedirectToPage("/AccessDenied");
+                // Redirect instead of Unauthorized() to provide better user experience
+                return RedirectToPage("/Home");
             }
 
-            // Replace with real database call later
+            // MOCK DATA: Replace with real database call later
+            // This creates sample client data for testing the admin dashboard
             Clients = new List<Client>
             {
                 new Client {
@@ -48,6 +55,8 @@ namespace AutumnRidgeUSA.Pages.Admin
                     Balance = 167.80f
                 }
             };
+
+            // Return the page with loaded client data
             return Page();
         }
     }
