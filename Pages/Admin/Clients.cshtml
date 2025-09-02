@@ -1,59 +1,373 @@
 ﻿@page
 @model AutumnRidgeUSA.Pages.Admin.ClientsModel
 @{
-    ViewData["Title"] = "Client Database";
+    ViewData["Title"] = "Admin Dashboard";
 }
 
-<div style="background-color: #f8f9fa; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
-    <nav style="display: flex; gap: 20px; align-items: center;">
-        <h3 style="margin: 0; color: #495057;">Admin Dashboard</h3>
-        <a href="/Admin/Clients" style="text-decoration: none; padding: 8px 15px; background-color: #007bff; color: white; border-radius: 4px;">
-            Client Database
-        </a>
-        <a href="/Admin/TempSignups" style="text-decoration: none; padding: 8px 15px; background-color: #6c757d; color: white; border-radius: 4px;">
-            Temp Signups
-        </a>
-    </nav>
+<h2>Admin Dashboard</h2>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-info">
+        @Model.StatusMessage
+    </div>
+}
+
+<!-- Tab Navigation -->
+<div class="tab-container">
+    <div class="tab-buttons">
+        <button class="tab-button active" onclick="showTab('clients')">Client Database</button>
+        <button class="tab-button" onclick="showTab('tempsignups')">Temp Signups (@Model.TempSignups.Count)</button>
+    </div>
+
+    <!-- Clients Tab -->
+    <div id="clients-tab" class="tab-content active">
+        <div class="tab-header">
+            <h3>Registered Clients</h3>
+            <p>Total clients: @Model.Clients.Count</p>
+        </div>
+
+        <table id="clientsTable" class="data-table">
+            <thead>
+                <tr>
+                    <th>UserId</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Signup Date</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in Model.Clients)
+                {
+                    <tr>
+                        <td>@client.UserId</td>
+                        <td>@client.FirstName</td>
+                        <td>@client.LastName</td>
+                        <td>@client.Email</td>
+                        <td>@client.PhoneNumber</td>
+                        <td>@client.SignupDate.ToShortDateString()</td>
+                        <td>@client.Balance.ToString("C")</td>
+                    </tr>
+                }
+
+                @if (!Model.Clients.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="no-data">No clients found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Temp Signups Tab -->
+    <div id="tempsignups-tab" class="tab-content">
+        <div class="tab-header">
+            <h3>Temporary Signups</h3>
+            <div class="tab-actions">
+                <p>Pending signups: @Model.TempSignups.Count</p>
+                <form method="post" asp-page-handler="CleanupExpired" style="display: inline;">
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Delete all expired signups?')">
+                        Clean Up Expired
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <table id="tempSignupsTable" class="data-table">
+            <thead>
+                <tr>
+                    <th>UserId</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Created</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var signup in Model.TempSignups)
+                {
+                    <tr class="@(signup.IsExpired ? "expired-row" : "")">
+                        <td>@signup.UserId</td>
+                        <td>@signup.FirstName @signup.LastName</td>
+                        <td>@signup.Email</td>
+                        <td>@signup.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                        <td>
+                            @if (signup.IsExpired)
+                            {
+                                <span class="status-expired">EXPIRED</span>
+                            }
+                            else if (signup.IsAuthorized)
+                            {
+                                <span class="status-authorized">AUTHORIZED</span>
+                            }
+                            else
+                            {
+                                <span class="status-pending">@signup.TimeRemaining</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!signup.IsAuthorized)
+                            {
+                                <form method="post" asp-page-handler="DeleteTempSignup" style="display: inline;">
+                                    <input type="hidden" name="signupId" value="@signup.Id" />
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Delete signup for @signup.Email?')">
+                                        Delete
+                                    </button>
+                                </form>
+
+                                @if (!signup.IsExpired)
+                                {
+                                    <form method="post" asp-page-handler="ResendEmail" style="display: inline;">
+                                        <input type="hidden" name="signupId" value="@signup.Id" />
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            Resend
+                                        </button>
+                                    </form>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+
+                @if (!Model.TempSignups.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="no-data">No temporary signups found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<h2>Client Database</h2>
-<table id="clientsTable" style="width: 100%; border-collapse: collapse;">
-    <thead style="background-color: #f2f2f2;">
-        <tr>
-            <th style="border: 1px solid #ddd; padding: 8px;">UserId</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">First Name</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Last Name</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Email</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Phone</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Signup Date</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Balance</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var client in Model.Clients)
-        {
-            <tr>
-                <td style="border: 1px solid #ddd; padding: 8px;">@client.UserId</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">@client.FirstName</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">@client.LastName</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">@client.Email</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">@client.PhoneNumber</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">@client.SignupDate.ToShortDateString()</td>
-                <td style="border: 1px solid #ddd; padding: 8px;">@client.Balance.ToString("C")</td>
-            </tr>
-        }
-    </tbody>
-</table>
-
 @section Scripts {
-    <!-- jQuery and DataTables -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+
+    <style>
+        /* Tab Styling */
+        .tab-container {
+            margin-top: 20px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+            .tab-button:hover {
+                color: #1e3a5f;
+                background-color: #f8f9fa;
+            }
+
+            .tab-button.active {
+                color: #1e3a5f;
+                border-bottom-color: #1e3a5f;
+            }
+
+        .tab-content {
+            display: none;
+        }
+
+            .tab-content.active {
+                display: block;
+            }
+
+        .tab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tab-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Table Styling */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+            .data-table thead th {
+                background-color: #f8f9fa;
+                border: 1px solid #ddd;
+                padding: 12px;
+                text-align: left;
+                font-weight: bold;
+                color: #495057;
+            }
+
+            .data-table tbody td {
+                border: 1px solid #ddd;
+                padding: 10px 12px;
+                vertical-align: middle;
+            }
+
+            .data-table tbody tr:hover {
+                background-color: #f8f9fa;
+            }
+
+        .expired-row {
+            background-color: #ffe6e6;
+        }
+
+            .expired-row:hover {
+                background-color: #ffcccc;
+            }
+
+        .no-data {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+            padding: 20px;
+        }
+
+        /* Status Badges */
+        .status-expired {
+            background-color: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-authorized {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            background-color: #ffc107;
+            color: #212529;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Button Styling */
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+            .btn-danger:hover {
+                background-color: #c82333;
+            }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+            .btn-primary:hover {
+                background-color: #0056b3;
+            }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+            .btn-warning:hover {
+                background-color: #e0a800;
+            }
+
+        /* Alert Styling */
+        .alert {
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+            border: 1px solid transparent;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+
     <script>
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+
         $(document).ready(function () {
+            // Initialize DataTables for both tables
             $('#clientsTable').DataTable({
-                "order": [[5, "desc"]] // Default sort by Signup Date (6th column, index 5)
+                "order": [[5, "desc"]], // Sort by Signup Date
+                "pageLength": 25
+            });
+
+            $('#tempSignupsTable').DataTable({
+                "order": [[3, "desc"]], // Sort by Created date
+                "pageLength": 25
             });
         });
     </script>
