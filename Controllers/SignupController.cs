@@ -49,10 +49,19 @@ namespace AutumnRidgeUSA.Controllers
                     _context.TempSignups.Remove(existingTemp);
                 }
 
+                // Generate unique UserId
+                string userId;
+                do
+                {
+                    userId = GenerateUserId();
+                } while (await _context.TempSignups.AnyAsync(t => t.UserId == userId) ||
+                         await _context.Users.AnyAsync(u => u.Id.ToString() == userId));
+
                 // Create temporary signup record
                 var token = Guid.NewGuid().ToString("N");
                 var tempSignup = new TempSignup
                 {
+                    UserId = userId, // Assign the generated UserId
                     FirstName = request.FirstName.Trim(),
                     LastName = request.LastName.Trim(),
                     Email = normalizedEmail,
@@ -64,15 +73,16 @@ namespace AutumnRidgeUSA.Controllers
                 _context.TempSignups.Add(tempSignup);
                 await _context.SaveChangesAsync();
 
-                // Send verification email
+                // Send verification email with UserId included
                 var verificationLink = $"{Request.Scheme}://{Request.Host}/Auth/CompleteRegistration?token={token}";
                 await _emailService.SendVerificationEmailAsync(
                     normalizedEmail,
                     $"{request.FirstName} {request.LastName}",
-                    verificationLink
+                    verificationLink,
+                    userId // Pass UserId to include in email
                 );
 
-                return Ok(new { message = "Verification email sent. Please check your inbox to complete registration." });
+                return Ok(new { message = "Verification email sent. Please check your inbox to complete registration.", userId = userId });
             }
             catch (Exception ex)
             {
@@ -80,6 +90,15 @@ namespace AutumnRidgeUSA.Controllers
                 Console.WriteLine($"Signup error: {ex.Message}");
                 return StatusCode(500, new { message = "An error occurred. Please try again." });
             }
+        }
+
+        private string GenerateUserId()
+        {
+            var random = new Random();
+            var numbers = random.Next(1000, 9999);
+            var letters = new string(Enumerable.Range(0, 3)
+                .Select(_ => (char)random.Next('A', 'Z' + 1)).ToArray());
+            return $"{numbers}-{letters}";
         }
     }
 
