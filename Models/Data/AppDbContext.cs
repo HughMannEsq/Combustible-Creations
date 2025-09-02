@@ -11,10 +11,10 @@ namespace AutumnRidgeUSA.Data
         {
         }
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<Client> Clients { get; set; }
-        public DbSet<StorageClient> StorageClients { get; set; }
-        public DbSet<TempSignup> TempSignups { get; set; } // Added for two-stage registration
+        public DbSet<User> Users { get; set; } = null!;
+        public DbSet<Client> Clients { get; set; } = null!;
+        public DbSet<StorageClient> StorageClients { get; set; } = null!;
+        public DbSet<TempSignup> TempSignups { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,10 +32,12 @@ namespace AutumnRidgeUSA.Data
             {
                 entity.HasIndex(e => e.Email);
                 entity.HasIndex(e => e.VerificationToken).IsUnique();
+                entity.HasIndex(e => e.UserId).IsUnique();
                 entity.Property(e => e.Email).HasMaxLength(255);
                 entity.Property(e => e.VerificationToken).HasMaxLength(255);
                 entity.Property(e => e.FirstName).HasMaxLength(50);
                 entity.Property(e => e.LastName).HasMaxLength(50);
+                entity.Property(e => e.UserId).HasMaxLength(20);
             });
 
             base.OnModelCreating(modelBuilder);

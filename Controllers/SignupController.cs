@@ -61,7 +61,7 @@ namespace AutumnRidgeUSA.Controllers
                 var token = Guid.NewGuid().ToString("N");
                 var tempSignup = new TempSignup
                 {
-                    UserId = userId, // Assign the generated UserId
+                    UserId = userId,
                     FirstName = request.FirstName.Trim(),
                     LastName = request.LastName.Trim(),
                     Email = normalizedEmail,
@@ -73,13 +73,12 @@ namespace AutumnRidgeUSA.Controllers
                 _context.TempSignups.Add(tempSignup);
                 await _context.SaveChangesAsync();
 
-                // Send verification email with UserId included
+                // Send verification email (fixed to use only 3 parameters)
                 var verificationLink = $"{Request.Scheme}://{Request.Host}/Auth/CompleteRegistration?token={token}";
                 await _emailService.SendVerificationEmailAsync(
                     normalizedEmail,
                     $"{request.FirstName} {request.LastName}",
-                    verificationLink,
-                    userId // Pass UserId to include in email
+                    verificationLink
                 );
 
                 return Ok(new { message = "Verification email sent. Please check your inbox to complete registration.", userId = userId });
