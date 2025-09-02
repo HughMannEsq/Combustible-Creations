@@ -237,7 +237,8 @@ namespace AutumnRidgeUSA.Pages.Admin
                     City = "Error",
                     State = "DB",
                     ZipCode = "00000",
-                    Balance = 0.0f
+                    Balance = 0.0f,
+                     Divisions = "Error"
                 });
             }
         }
@@ -287,47 +288,50 @@ namespace AutumnRidgeUSA.Pages.Admin
         private List<Client> GetMockClientData()
         {
             return new List<Client>
-            {
-                new Client {
-                    UserId = "6328-XHN",
-                    FirstName = "Alice",
-                    LastName = "Smith",
-                    Email = "alice@example.com",
-                    SignupDate = DateTime.UtcNow.AddDays(-10),
-                    PhoneNumber = "555-1234",
-                    Address = "123 Main St",
-                    City = "Battle Creek",
-                    State = "MI",
-                    ZipCode = "49017",
-                    Balance = 123.45f
-                },
-                new Client {
-                    UserId = "3829-IFV",
-                    FirstName = "Bob",
-                    LastName = "Sackley",
-                    Email = "bob@example.com",
-                    SignupDate = DateTime.UtcNow.AddDays(-5),
-                    PhoneNumber = "555-5678",
-                    Address = "456 Oak Ave",
-                    City = "Kalamazoo",
-                    State = "MI",
-                    ZipCode = "49001",
-                    Balance = 67.89f
-                },
-                new Client {
-                    UserId = "7832-HIG",
-                    FirstName = "Carlos",
-                    LastName = "Hogan",
-                    Email = "carlos@example.com",
-                    SignupDate = DateTime.UtcNow.AddDays(-1),
-                    PhoneNumber = "555-8538",
-                    Address = "789 Pine St",
-                    City = "Grand Rapids",
-                    State = "MI",
-                    ZipCode = "49503",
-                    Balance = 167.80f
-                }
-            };
+    {
+        new Client {
+            UserId = "6328-XHN",
+            FirstName = "Alice",
+            LastName = "Smith",
+            Email = "alice@example.com",
+            SignupDate = DateTime.UtcNow.AddDays(-10),
+            PhoneNumber = "555-1234",
+            Address = "123 Main St",
+            City = "Battle Creek",
+            State = "MI",
+            ZipCode = "49017",
+            Balance = 123.45f,
+            Divisions = "Storage, Real Estate"  // Alice has contracts with Storage and Real Estate
+        },
+        new Client {
+            UserId = "3829-IFV",
+            FirstName = "Bob",
+            LastName = "Sackley",
+            Email = "bob@example.com",
+            SignupDate = DateTime.UtcNow.AddDays(-5),
+            PhoneNumber = "555-5678",
+            Address = "456 Oak Ave",
+            City = "Kalamazoo",
+            State = "MI",
+            ZipCode = "49001",
+            Balance = 67.89f,
+            Divisions = "Contracting"  // Bob only has Contracting
+        },
+        new Client {
+            UserId = "7832-HIG",
+            FirstName = "Carlos",
+            LastName = "Hogan",
+            Email = "carlos@example.com",
+            SignupDate = DateTime.UtcNow.AddDays(-1),
+            PhoneNumber = "555-8538",
+            Address = "789 Pine St",
+            City = "Grand Rapids",
+            State = "MI",
+            ZipCode = "49503",
+            Balance = 167.80f,
+            Divisions = ""  // Carlos has no active contracts - field will be blank
+        }
+    };
         }
     }
 }

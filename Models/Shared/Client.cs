@@ -18,6 +18,8 @@ namespace AutumnRidgeUSA.Models.Shared
         public float Balance { get; set; }
         public DateTime SignupDate { get; set; }
 
+        public string Divisions { get; set; } = string.Empty;
+
         // Computed property that combines all address fields for dashboard display
         [NotMapped] // This tells Entity Framework not to create a database column for this property
         public string FullAddress
@@ -40,7 +42,6 @@ namespace AutumnRidgeUSA.Models.Shared
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}".Trim();
 
-        [NotMapped]
-        public string Divisions { get; set; } = string.Empty;
+      
     }
 }

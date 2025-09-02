@@ -372,3 +372,10 @@
         });
     </script>
 }
+
+@if (!Model.Clients.Any())
+{
+    <tr>
+        <td colspan="8" class="no-data">No clients found matching current filters</td>
+    </tr>
+}
