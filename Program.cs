@@ -1,7 +1,7 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Data;
 using AutumnRidgeUSA.Services;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +10,7 @@ var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // Add services to the container - ALL services must be added BEFORE builder.Build()
+
 // Database configuration - environment-specific
 if (builder.Environment.IsDevelopment())
 {
@@ -30,6 +31,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // For MVC controllers
 
 // Register Email Service
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Build the app AFTER all services are registered
@@ -77,6 +80,7 @@ if (app.Environment.IsDevelopment())
                 new Claim(ClaimTypes.Name, "TestUser"),
                 new Claim(ClaimTypes.Role, impersonatedRole)
             };
+
             var identity = new ClaimsIdentity(claims, "Fake");
             var principal = new ClaimsPrincipal(identity);
             context.User = principal;
@@ -100,5 +104,6 @@ app.MapGet("/", context =>
 });
 
 app.MapRazorPages();
+app.MapControllers();
 
 app.Run();

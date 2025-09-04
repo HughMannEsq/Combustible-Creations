@@ -14,11 +14,13 @@ namespace AutumnRidgeUSA.Pages.Auth
     {
         private readonly AppDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly ILogger<RegisterModel> _logger;
 
-        public RegisterModel(AppDbContext context, IEmailService emailService)
+        public RegisterModel(AppDbContext context, IEmailService emailService, ILogger<RegisterModel> logger)
         {
             _context = context;
             _emailService = emailService;
+            _logger = logger;
         }
 
         [BindProperty]
@@ -55,27 +57,40 @@ namespace AutumnRidgeUSA.Pages.Auth
                 return Page();
             }
 
+            var normalizedEmail = Email.ToLower().Trim();
+
             // Check if user already exists
-            if (await _context.Users.AnyAsync(u => u.Email == Email))
+            if (await _context.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail))
             {
                 ModelState.AddModelError(nameof(Email), "An account with this email already exists.");
                 return Page();
             }
 
             // Check if there's already a temp signup for this email
-            var existingTemp = await _context.TempSignups.FirstOrDefaultAsync(t => t.Email == Email);
+            var existingTemp = await _context.TempSignups
+                .FirstOrDefaultAsync(t => t.Email.ToLower() == normalizedEmail);
             if (existingTemp != null)
             {
                 _context.TempSignups.Remove(existingTemp); // Remove old temp record
             }
 
+            // Generate unique UserId
+            string userId;
+            do
+            {
+                userId = GenerateUserId();
+            } while (await _context.TempSignups.AnyAsync(t => t.UserId == userId) ||
+                     await _context.Users.AnyAsync(u => u.UserId == userId));
+
             // Create temp signup record (no password yet)
+            var verificationToken = GenerateConfirmationToken();
             var tempSignup = new TempSignup
             {
-                FirstName = FirstName,
-                LastName = LastName,
-                Email = Email,
-                VerificationToken = GenerateConfirmationToken(),
+                UserId = userId,  // Now including the UserId
+                FirstName = FirstName.Trim(),
+                LastName = LastName.Trim(),
+                Email = normalizedEmail,
+                VerificationToken = verificationToken,
                 CreatedAt = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow.AddHours(1)
             };
@@ -85,18 +100,37 @@ namespace AutumnRidgeUSA.Pages.Auth
 
             try
             {
-                // Send verification email to complete registration
-                var completeUrl = $"{Request.Scheme}://{Request.Host}/Auth/CompleteRegistration?token={tempSignup.VerificationToken}";
+                // Build the complete verification URL with both token and userId
+                var completeUrl = $"{Request.Scheme}://{Request.Host}/Auth/CompleteRegistration?token={verificationToken}&userId={userId}";
 
-                await _emailService.SendVerificationEmailAsync(Email, $"{FirstName} {LastName}", completeUrl!);
-                StatusMessage = "Please check your email for a link to complete your registration.";
+                // Send verification email with all 5 required parameters
+                await _emailService.SendVerificationEmailAsync(
+                    normalizedEmail,        // toEmail
+                    FirstName.Trim(),       // firstName
+                    LastName.Trim(),        // lastName
+                    userId,                 // userId
+                    completeUrl            // verificationLink
+                );
+
+                StatusMessage = "Please check your email for a link to complete your registration. Your User ID is: " + userId;
+                _logger.LogInformation("Registration initiated for {Email} with UserId {UserId}", normalizedEmail, userId);
             }
             catch (Exception ex)
             {
                 StatusMessage = $"Error sending email: {ex.Message}";
+                _logger.LogError(ex, "Failed to send verification email to {Email}", normalizedEmail);
             }
 
             return RedirectToPage("/Auth/Register");
+        }
+
+        private string GenerateUserId()
+        {
+            var random = new Random();
+            var numbers = random.Next(1000, 9999);
+            var letters = new string(Enumerable.Range(0, 3)
+                .Select(_ => (char)random.Next('A', 'Z' + 1)).ToArray());
+            return $"{numbers}-{letters}";
         }
 
         private static string HashPassword(string password)

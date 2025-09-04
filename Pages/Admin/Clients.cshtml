@@ -1,53 +1,624 @@
 ﻿@page
 @model AutumnRidgeUSA.Pages.Admin.ClientsModel
 @{
-    ViewData["Title"] = "Debug Admin Dashboard";
+    ViewData["Title"] = "Admin Dashboard";
 }
 
-<h2>Debug Admin Dashboard</h2>
+<h2>Admin Dashboard</h2>
 
-<p>Total clients loaded: @Model.Clients.Count</p>
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-info">
+        @Model.StatusMessage
+    </div>
+}
 
-<table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-    <thead style="background-color: #f0f0f0;">
-        <tr>
-            <th>1. UserId</th>
-            <th>2. Name</th>
-            <th>3. Email</th>
-            <th>4. Phone</th>
-            <th>5. Address</th>
-            <th>6. DIVISIONS</th>
-            <th>7. Signup Date</th>
-            <th>8. Balance</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var client in Model.Clients)
-        {
-            <tr>
-                <td>@client.UserId</td>
-                <td>@client.FirstName @client.LastName</td>
-                <td>@client.Email</td>
-                <td>@client.PhoneNumber</td>
-                <td>@client.Address, @client.City, @client.State @client.ZipCode</td>
-                <td style="background-color: yellow; font-weight: bold;">
-                    "@client.Divisions"
-                </td>
-                <td>@client.SignupDate.ToString("MM/dd/yyyy")</td>
-                <td>@client.Balance.ToString("C")</td>
-            </tr>
+<!-- Tab Navigation -->
+<div class="tab-container">
+    <div class="tab-buttons">
+        <button class="tab-button active" onclick="showTab('clients')">Client Database</button>
+        <button class="tab-button" onclick="showTab('tempsignups')">Temp Signups (@Model.TempSignups.Count)</button>
+    </div>
+
+    <!-- Clients Tab -->
+    <div id="clients-tab" class="tab-content active">
+        <div class="tab-header">
+            <h3>Registered Clients</h3>
+            <p>Total clients: @Model.Clients.Count</p>
+        </div>
+
+        <!-- Division Filtering Panel -->
+        <div class="filter-panel">
+            <form method="get" id="divisionFilterForm">
+                <div class="filter-header">
+                    <h4>Filter by Divisions</h4>
+                    <div class="filter-operator">
+                        <button type="button" id="operatorToggle" class="btn btn-filter @(Model.DivisionFilter.FilterOperator == "AND" ? "btn-and" : "btn-or")"
+                                onclick="toggleOperator()">
+                            @Model.DivisionFilter.FilterOperator
+                        </button>
+                        <input type="hidden" name="filterOperator" id="filterOperatorInput" value="@Model.DivisionFilter.FilterOperator" />
+                        <small class="filter-help">
+                            @(Model.DivisionFilter.FilterOperator == "AND" ? "Show clients with ALL selected divisions" : "Show clients with ANY selected divisions")
+                        </small>
+                    </div>
+                </div>
+
+                <div class="division-checkboxes">
+                    @foreach (var division in Model.DivisionFilter.AvailableDivisions)
+                    {
+                        <label class="division-checkbox">
+                            <input type="checkbox" name="selectedDivisions" value="@division.Id"
+                            @(Model.DivisionFilter.SelectedDivisionIds.Contains(division.Id) ? "checked" : "")
+                                   onchange="document.getElementById('divisionFilterForm').submit()" />
+                            <span class="checkmark"></span>
+                            @division.Name
+                            <small>(@Model.Clients.Count(c => c.Divisions.Contains(division.Name)))</small>
+                        </label>
+                    }
+                </div>
+
+                <div class="filter-actions">
+                    <a href="@Url.Page("/Admin/Clients")" class="btn btn-secondary btn-sm">Clear Filters</a>
+                </div>
+            </form>
+        </div>
+
+        <table id="clientsTable" class="data-table">
+            <thead>
+                <tr>
+                    <th>UserId</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Divisions</th>
+                    <th>Signup Date</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in Model.Clients)
+                {
+                    <tr>
+                        <td><strong>@client.UserId</strong></td>
+                        <td>@client.FullName</td>
+                        <td>
+                            <a href="mailto:@client.Email" style="color: #007bff; text-decoration: none;">
+                                @client.Email
+                            </a>
+                        </td>
+                        <td>@(client.PhoneNumber ?? "N/A")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(client.FullAddress))
+                            {
+                                <span title="@client.FullAddress">@client.FullAddress</span>
+                            }
+                            else
+                            {
+                                <span style="color: #666; font-style: italic;">No address</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(client.Divisions))
+                            {
+                                <div class="divisions-cell">
+                                    @foreach (var division in client.Divisions.Split(','))
+                                    {
+                                        <span class="division-badge division-@division.Trim().ToLower().Replace(" ", "")">
+                                            @division.Trim()
+                                        </span>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">None</span>
+                            }
+                        </td>
+                        <td>@client.SignupDate.ToString("MM/dd/yyyy")</td>
+                        <td style="text-align: right; font-weight: bold;">@client.Balance.ToString("C")</td>
+                    </tr>
+                }
+
+                @if (!Model.Clients.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="no-data">No clients found matching current filters</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Temp Signups Tab (unchanged) -->
+    <div id="tempsignups-tab" class="tab-content">
+        <div class="tab-header">
+            <h3>Temporary Signups</h3>
+            <div class="tab-actions">
+                <p>Pending signups: @Model.TempSignups.Count</p>
+                <form method="post" asp-page-handler="CleanupExpired" style="display: inline;">
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Delete all expired signups?')">
+                        Clean Up Expired
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <table id="tempSignupsTable" class="data-table">
+            <thead>
+                <tr>
+                    <th>UserId</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Created</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var signup in Model.TempSignups)
+                {
+                    <tr class="@(signup.IsExpired ? "expired-row" : "")">
+                        <td><strong>@signup.UserId</strong></td>
+                        <td>@signup.FirstName @signup.LastName</td>
+                        <td>
+                            <a href="mailto:@signup.Email" style="color: #007bff; text-decoration: none;">
+                                @signup.Email
+                            </a>
+                        </td>
+                        <td>@signup.CreatedAt.ToString("MM/dd/yyyy HH:mm")</td>
+                        <td>
+                            @if (signup.IsExpired)
+                            {
+                                <span class="status-expired">EXPIRED</span>
+                            }
+                            else if (signup.IsAuthorized)
+                            {
+                                <span class="status-authorized">AUTHORIZED</span>
+                            }
+                            else
+                            {
+                                <span class="status-pending">@signup.TimeRemaining</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!signup.IsAuthorized)
+                            {
+                                <form method="post" asp-page-handler="DeleteTempSignup" style="display: inline;">
+                                    <input type="hidden" name="signupId" value="@signup.Id" />
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Delete signup for @signup.Email?')">
+                                        Delete
+                                    </button>
+                                </form>
+
+                                @if (!signup.IsExpired)
+                                {
+                                    <form method="post" asp-page-handler="ResendEmail" style="display: inline;">
+                                        <input type="hidden" name="signupId" value="@signup.Id" />
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            Resend
+                                        </button>
+                                    </form>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+
+                @if (!Model.TempSignups.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="no-data">No temporary signups found</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+
+    <style>
+        /* Existing styles... */
+        .tab-container {
+            margin-top: 20px;
         }
-    </tbody>
-</table>
 
-<h3>Debug Information</h3>
-<ul>
-    @foreach (var client in Model.Clients)
-    {
-        <li>
-            <strong>@client.FirstName @client.LastName:</strong>
-            Divisions property = "@client.Divisions"
-            (Length: @client.Divisions.Length characters)
-        </li>
-    }
-</ul>
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+            .tab-button:hover {
+                color: #1e3a5f;
+                background-color: #f8f9fa;
+            }
+
+            .tab-button.active {
+                color: #1e3a5f;
+                border-bottom-color: #1e3a5f;
+            }
+
+        .tab-content {
+            display: none;
+        }
+
+            .tab-content.active {
+                display: block;
+            }
+
+        .tab-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tab-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* NEW: Division Filtering Styles */
+        .filter-panel {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+            .filter-header h4 {
+                margin: 0;
+                color: #1e3a5f;
+            }
+
+        .filter-operator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-filter {
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .btn-and {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-or {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .filter-help {
+            color: #666;
+            font-size: 11px;
+        }
+
+        .division-checkboxes {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .division-checkbox {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+            .division-checkbox:hover {
+                background-color: #e3f2fd;
+                border-color: #1e3a5f;
+            }
+
+            .division-checkbox input[type="checkbox"] {
+                margin-right: 8px;
+            }
+
+            .division-checkbox small {
+                margin-left: 5px;
+                color: #666;
+            }
+
+        .filter-actions {
+            text-align: right;
+        }
+
+        /* Division badges in table */
+        .divisions-cell {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .division-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .division-storage {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #bbdefb;
+        }
+
+        .division-contracting {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ffcc02;
+        }
+
+        .division-realestate {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        /* Table Styling */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+            .data-table thead th {
+                background-color: #f8f9fa;
+                border: 1px solid #ddd;
+                padding: 12px;
+                text-align: left;
+                font-weight: bold;
+                color: #495057;
+            }
+
+            .data-table tbody td {
+                border: 1px solid #ddd;
+                padding: 10px 12px;
+                vertical-align: middle;
+            }
+
+            .data-table tbody tr:hover {
+                background-color: #f8f9fa;
+            }
+
+        .expired-row {
+            background-color: #ffe6e6;
+        }
+
+            .expired-row:hover {
+                background-color: #ffcccc;
+            }
+
+        .no-data {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+            padding: 20px;
+        }
+
+        /* Status Badges */
+        .status-expired {
+            background-color: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-authorized {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-pending {
+            background-color: #ffc107;
+            color: #212529;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Button Styling */
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+            .btn-danger:hover {
+                background-color: #c82333;
+            }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+            .btn-primary:hover {
+                background-color: #0056b3;
+            }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+            .btn-warning:hover {
+                background-color: #e0a800;
+            }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+            .btn-secondary:hover {
+                background-color: #545b62;
+            }
+
+        /* Alert Styling */
+        .alert {
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+            border: 1px solid transparent;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+
+        /* Enhanced table styling for address and division columns */
+        .data-table td:nth-child(5) {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .data-table td:nth-child(6) {
+            min-width: 150px;
+        }
+
+        .data-table td:nth-child(8) {
+            font-family: 'Courier New', monospace;
+        }
+
+        .text-muted {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+
+    <script>
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Add active class to clicked button
+            event.target.classList.add('active');
+        }
+
+        function toggleOperator() {
+            const operatorButton = document.getElementById('operatorToggle');
+            const operatorInput = document.getElementById('filterOperatorInput');
+
+            if (operatorInput.value === 'AND') {
+                operatorInput.value = 'OR';
+                operatorButton.textContent = 'OR';
+                operatorButton.className = 'btn btn-filter btn-or';
+                document.querySelector('.filter-help').textContent = 'Show clients with ANY selected divisions';
+            } else {
+                operatorInput.value = 'AND';
+                operatorButton.textContent = 'AND';
+                operatorButton.className = 'btn btn-filter btn-and';
+                document.querySelector('.filter-help').textContent = 'Show clients with ALL selected divisions';
+            }
+
+            // Auto-submit the form
+            document.getElementById('divisionFilterForm').submit();
+        }
+
+        $(document).ready(function () {
+            // Initialize DataTables for both tables
+            $('#clientsTable').DataTable({
+                "order": [[6, "desc"]], // Sort by Signup Date (adjusted for new column)
+                "pageLength": 25,
+                "responsive": true,
+                "columnDefs": [
+                    { "orderable": false, "targets": 5 } // Disable sorting on Divisions column
+                ]
+            });
+
+            $('#tempSignupsTable').DataTable({
+                "order": [[3, "desc"]], // Sort by Created date
+                "pageLength": 25,
+                "responsive": true
+            });
+        });
+    </script>
+}

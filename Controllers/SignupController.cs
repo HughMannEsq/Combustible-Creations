@@ -12,11 +12,13 @@ namespace AutumnRidgeUSA.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly ILogger<SignupController> _logger;
 
-        public SignupController(AppDbContext context, IEmailService emailService)
+        public SignupController(AppDbContext context, IEmailService emailService, ILogger<SignupController> logger)
         {
             _context = context;
             _emailService = emailService;
+            _logger = logger;
         }
 
         [HttpPost("signup")]
@@ -55,7 +57,7 @@ namespace AutumnRidgeUSA.Controllers
                 {
                     userId = GenerateUserId();
                 } while (await _context.TempSignups.AnyAsync(t => t.UserId == userId) ||
-                         await _context.Users.AnyAsync(u => u.Id.ToString() == userId));
+                         await _context.Users.AnyAsync(u => u.UserId == userId));
 
                 // Create temporary signup record
                 var token = Guid.NewGuid().ToString("N");
@@ -73,20 +75,29 @@ namespace AutumnRidgeUSA.Controllers
                 _context.TempSignups.Add(tempSignup);
                 await _context.SaveChangesAsync();
 
-                // Send verification email (fixed to use only 3 parameters)
-                var verificationLink = $"{Request.Scheme}://{Request.Host}/Auth/CompleteRegistration?token={token}";
+                // Build the verification link
+                var verificationLink = $"{Request.Scheme}://{Request.Host}/Auth/CompleteRegistration?token={token}&userId={userId}";
+
+                // Send verification email with all 5 required parameters
                 await _emailService.SendVerificationEmailAsync(
-                    normalizedEmail,
-                    $"{request.FirstName} {request.LastName}",
-                    verificationLink
+                    normalizedEmail,                    // toEmail
+                    request.FirstName.Trim(),           // firstName
+                    request.LastName.Trim(),            // lastName
+                    userId,                             // userId
+                    verificationLink                    // verificationLink
                 );
 
-                return Ok(new { message = "Verification email sent. Please check your inbox to complete registration.", userId = userId });
+                _logger.LogInformation("Signup initiated for {Email} with UserId {UserId}", normalizedEmail, userId);
+
+                return Ok(new
+                {
+                    message = "Verification email sent. Please check your inbox to complete registration.",
+                    userId = userId
+                });
             }
             catch (Exception ex)
             {
-                // Log the error (you might want to use a proper logging framework)
-                Console.WriteLine($"Signup error: {ex.Message}");
+                _logger.LogError(ex, "Signup error for email: {Email}", request.Email);
                 return StatusCode(500, new { message = "An error occurred. Please try again." });
             }
         }
