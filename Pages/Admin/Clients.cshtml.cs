@@ -47,6 +47,10 @@ namespace AutumnRidgeUSA.Pages.Admin
             DivisionFilter.FilterOperator = filterOperator ?? "OR";
             await LoadDivisionsAsync();
 
+            // Log the filter parameters for debugging
+            _logger.LogInformation("Filter applied - Divisions: [{DivisionIds}], Operator: {Operator}",
+                string.Join(", ", DivisionFilter.SelectedDivisionIds), DivisionFilter.FilterOperator);
+
             // Load data
             await LoadClientsAsync();
             await LoadTempSignupsAsync();
@@ -200,6 +204,8 @@ namespace AutumnRidgeUSA.Pages.Admin
                 // Apply division filtering if any divisions are selected
                 if (DivisionFilter.SelectedDivisionIds.Any())
                 {
+                    _logger.LogInformation("Applying division filter with {Count} divisions", DivisionFilter.SelectedDivisionIds.Count);
+
                     if (DivisionFilter.FilterOperator == "AND")
                     {
                         // User must have ALL selected divisions
@@ -207,12 +213,14 @@ namespace AutumnRidgeUSA.Pages.Admin
                         {
                             query = query.Where(u => u.UserDivisions.Any(ud => ud.DivisionId == divisionId && ud.IsActive));
                         }
+                        _logger.LogInformation("Applied AND filter for divisions");
                     }
                     else // OR
                     {
                         // User must have ANY of the selected divisions
                         query = query.Where(u => u.UserDivisions.Any(ud =>
                             DivisionFilter.SelectedDivisionIds.Contains(ud.DivisionId) && ud.IsActive));
+                        _logger.LogInformation("Applied OR filter for divisions");
                     }
                 }
 
@@ -241,21 +249,44 @@ namespace AutumnRidgeUSA.Pages.Admin
 
                 Clients = realClients;
 
-                // Fallback to mock data if no real clients exist
-                if (!Clients.Any())
+                _logger.LogInformation("Loaded {Count} clients after filtering", Clients.Count);
+
+                // Fallback to mock data if no real clients exist AND no filter is applied
+                if (!Clients.Any() && !DivisionFilter.SelectedDivisionIds.Any())
                 {
                     _logger.LogInformation("No real clients found, using mock data for admin dashboard");
                     Clients = GetMockClientData();
+
+                    // Apply filtering to mock data if needed
+                    if (DivisionFilter.SelectedDivisionIds.Any())
+                    {
+                        Clients = FilterMockData(Clients);
+                    }
                 }
-                else
+                else if (!Clients.Any() && DivisionFilter.SelectedDivisionIds.Any())
                 {
-                    _logger.LogInformation("Loaded {Count} clients for admin dashboard", Clients.Count);
+                    // If filter is applied but no clients match, try filtering mock data
+                    _logger.LogInformation("No real clients match filter, checking mock data");
+                    var mockData = GetMockClientData();
+                    var filteredMockData = FilterMockData(mockData);
+
+                    if (filteredMockData.Any())
+                    {
+                        Clients = filteredMockData;
+                        _logger.LogInformation("Using filtered mock data: {Count} clients", Clients.Count);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load clients from database, falling back to mock data");
                 Clients = GetMockClientData();
+
+                // Apply filtering to mock data if needed
+                if (DivisionFilter.SelectedDivisionIds.Any())
+                {
+                    Clients = FilterMockData(Clients);
+                }
 
                 Clients.Insert(0, new Client
                 {
@@ -273,6 +304,54 @@ namespace AutumnRidgeUSA.Pages.Admin
                     Divisions = "Error"
                 });
             }
+        }
+
+        private List<Client> FilterMockData(List<Client> mockClients)
+        {
+            if (!DivisionFilter.SelectedDivisionIds.Any())
+                return mockClients;
+
+            // Get selected division names
+            var selectedDivisionNames = DivisionFilter.AvailableDivisions
+                .Where(d => DivisionFilter.SelectedDivisionIds.Contains(d.Id))
+                .Select(d => d.Name)
+                .ToList();
+
+            _logger.LogInformation("Filtering mock data for divisions: {Divisions}", string.Join(", ", selectedDivisionNames));
+
+            var filteredClients = new List<Client>();
+
+            foreach (var client in mockClients)
+            {
+                if (string.IsNullOrEmpty(client.Divisions))
+                    continue;
+
+                var clientDivisions = client.Divisions.Split(',').Select(d => d.Trim()).ToList();
+
+                bool matches = false;
+                if (DivisionFilter.FilterOperator == "AND")
+                {
+                    // Client must have ALL selected divisions
+                    matches = selectedDivisionNames.All(selectedDiv =>
+                        clientDivisions.Any(clientDiv =>
+                            string.Equals(clientDiv, selectedDiv, StringComparison.OrdinalIgnoreCase)));
+                }
+                else // OR
+                {
+                    // Client must have ANY of the selected divisions
+                    matches = selectedDivisionNames.Any(selectedDiv =>
+                        clientDivisions.Any(clientDiv =>
+                            string.Equals(clientDiv, selectedDiv, StringComparison.OrdinalIgnoreCase)));
+                }
+
+                if (matches)
+                {
+                    filteredClients.Add(client);
+                }
+            }
+
+            _logger.LogInformation("Mock data filter result: {Count} clients match", filteredClients.Count);
+            return filteredClients;
         }
 
         private async Task LoadTempSignupsAsync()
