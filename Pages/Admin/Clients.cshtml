@@ -584,6 +584,11 @@
             event.target.classList.add('active');
         }
 
+        function toggleDropdown() {
+            const dropdown = document.getElementById('divisionDropdown');
+            dropdown.classList.toggle('show');
+        }
+
         function toggleOperator() {
             const operatorButton = document.getElementById('operatorToggle');
             const operatorInput = document.getElementById('filterOperatorInput');
@@ -599,9 +604,17 @@
                 operatorButton.className = 'btn btn-filter btn-and';
                 document.querySelector('.filter-help').textContent = 'Show clients with ALL selected divisions';
             }
-
-            // Note: No longer auto-submitting the form - user must click Apply
         }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('divisionDropdown');
+            const trigger = document.querySelector('.dropdown-trigger');
+
+            if (dropdown && !dropdown.contains(event.target) && !trigger.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
 
         $(document).ready(function () {
             // Simple DataTables initialization for clients table only
