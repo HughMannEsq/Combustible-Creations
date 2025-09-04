@@ -604,23 +604,13 @@
         }
 
         $(document).ready(function () {
-            // Destroy existing DataTables if they exist to prevent conflicts
-            if ($.fn.DataTable.isDataTable('#clientsTable')) {
-                $('#clientsTable').DataTable().destroy();
-            }
-
-            // Initialize DataTables only for clients table
+            // Simple DataTables initialization for clients table only
             $('#clientsTable').DataTable({
-                "order": [[6, "desc"]], // Sort by Signup Date
-                "pageLength": 25,
-                "responsive": true,
-                "columnDefs": [
-                    { "orderable": false, "targets": 5 } // Disable sorting on Divisions column
-                ]
+                "order": [[6, "desc"]],
+                "pageLength": 25
             });
 
-            // Don't initialize DataTables for tempSignupsTable - it has form elements that cause issues
-            // Just add basic styling instead
+            // No DataTables for temp signups - just regular table
         });
     </script>
 }
