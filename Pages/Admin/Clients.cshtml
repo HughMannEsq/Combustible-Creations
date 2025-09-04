@@ -566,6 +566,74 @@
     </style>
 
     <script>
+        $(document).ready(function () {
+            // Simple DataTables initialization for clients table only
+            var table = $('#clientsTable').DataTable({
+                "order": [[6, "desc"]],
+                "pageLength": 25,
+                "dom": 't<"bottom"flp><"clear">' // Custom DOM to control layout
+            });
+
+            // Create custom toolbar and integrate with DataTables controls
+            createCustomToolbar();
+
+            // No DataTables for temp signups - just regular table
+        });
+
+        function createCustomToolbar() {
+            // Create the custom toolbar HTML
+            var toolbarHTML = `
+                <div class="custom-toolbar">
+                    <div class="toolbar-left">
+                        <div class="dataTables_filter">
+                            <label>Search: <input type="search" class="" placeholder="" aria-controls="clientsTable"></label>
+                        </div>
+                        <button type="button" class="filter-divisions-btn" onclick="toggleDivisionsDropdown()">
+                            Filter by Divisions ▼
+                        </button>
+                        <button type="button" class="operator-btn ${@Model.DivisionFilter.FilterOperator.ToLower()}" onclick="toggleOperator()">
+        @Model.DivisionFilter.FilterOperator
+                        </button>
+                        <button type="button" class="action-btn primary" onclick="applyFilters()">Apply Filters</button>
+                        <a href="@Url.Page("/Admin/Clients")" class="action-btn secondary">Clear Filters</a>
+                    </div>
+                    <div class="toolbar-right">
+                        <div class="dataTables_length">
+                            <label>Show
+                                <select name="clientsTable_length" aria-controls="clientsTable">
+                                    <option value="10">10</option>
+                                    <option value="25" selected="selected">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select> entries
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Replace DataTables' default controls with custom toolbar
+            $('.dataTables_filter').parent().hide(); // Hide default search
+            $('.dataTables_length').parent().hide(); // Hide default show entries
+
+            // Insert custom toolbar before the table
+            $('#clientsTable').before(toolbarHTML);
+
+            // Wire up the custom search box to DataTables
+            $('.custom-toolbar .dataTables_filter input').on('keyup', function() {
+                $('#clientsTable').DataTable().search(this.value).draw();
+            });
+
+            // Wire up the custom length selector to DataTables
+            $('.custom-toolbar .dataTables_length select').on('change', function() {
+                $('#clientsTable').DataTable().page.len(this.value).draw();
+            });
+
+            // Move the dropdown to the toolbar
+            var dropdown = $('#divisionDropdown');
+            $('.toolbar-left').append(dropdown);
+        }
+
         function showTab(tabName) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -584,35 +652,47 @@
             event.target.classList.add('active');
         }
 
-        function toggleDropdown() {
+        function toggleDivisionsDropdown() {
             const dropdown = document.getElementById('divisionDropdown');
+            const btn = document.querySelector('.filter-divisions-btn');
+
             dropdown.classList.toggle('show');
+            btn.classList.toggle('active');
         }
 
         function toggleOperator() {
-            const operatorButton = document.getElementById('operatorToggle');
+            const operatorBtn = document.querySelector('.operator-btn');
             const operatorInput = document.getElementById('filterOperatorInput');
 
             if (operatorInput.value === 'AND') {
                 operatorInput.value = 'OR';
-                operatorButton.textContent = 'OR';
-                operatorButton.className = 'btn btn-filter btn-or';
-                document.querySelector('.filter-help').textContent = 'Show clients with ANY selected divisions';
+                operatorBtn.textContent = 'OR';
+                operatorBtn.className = 'operator-btn or';
             } else {
                 operatorInput.value = 'AND';
-                operatorButton.textContent = 'AND';
-                operatorButton.className = 'btn btn-filter btn-and';
-                document.querySelector('.filter-help').textContent = 'Show clients with ALL selected divisions';
+                operatorBtn.textContent = 'AND';
+                operatorBtn.className = 'operator-btn and';
             }
+        }
+
+        function updateHiddenCheckbox(divisionId) {
+            const visibleCheckbox = event.target;
+            const hiddenCheckbox = document.getElementById('hidden-' + divisionId);
+            hiddenCheckbox.checked = visibleCheckbox.checked;
+        }
+
+        function applyFilters() {
+            document.getElementById('divisionFilterForm').submit();
         }
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function(event) {
             const dropdown = document.getElementById('divisionDropdown');
-            const trigger = document.querySelector('.dropdown-trigger');
+            const btn = document.querySelector('.filter-divisions-btn');
 
-            if (dropdown && !dropdown.contains(event.target) && !trigger.contains(event.target)) {
+            if (dropdown && !dropdown.contains(event.target) && !btn.contains(event.target)) {
                 dropdown.classList.remove('show');
+                btn.classList.remove('active');
             }
         });
 
