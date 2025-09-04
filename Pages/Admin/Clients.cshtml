@@ -585,7 +585,28 @@
             var currentOperator = document.getElementById('filterOperatorInput').value;
             var operatorClass = currentOperator.toLowerCase();
 
-            // Create the custom toolbar HTML
+            // Get divisions data from the form
+            var divisionsData = @Html.Raw(Json.Serialize(Model.DivisionFilter.AvailableDivisions.Select(d => new
+            {
+                Id = d.Id,
+                Name = d.Name,
+                Count = Model.Clients.Count(c => c.Divisions.Contains(d.Name)),
+                Selected = Model.DivisionFilter.SelectedDivisionIds.Contains(d.Id)
+            })));
+
+            // Build divisions checkboxes HTML
+            var divisionsHTML = '';
+            for (var i = 0; i < divisionsData.length; i++) {
+                var div = divisionsData[i];
+                var checkedAttr = div.Selected ? 'checked' : '';
+                divisionsHTML +=
+                    '<label class="division-checkbox">' +
+                        '<input type="checkbox" value="' + div.Id + '" onchange="updateHiddenCheckbox(' + div.Id + ')" ' + checkedAttr + ' />' +
+                        div.Name + ' (' + div.Count + ')' +
+                    '</label>';
+            }
+
+            // Create the custom toolbar HTML with embedded dropdown
             var toolbarHTML =
                 '<div class="custom-toolbar">' +
                     '<div class="toolbar-left">' +
@@ -595,6 +616,14 @@
                         '<button type="button" class="filter-divisions-btn" onclick="toggleDivisionsDropdown()">' +
                             'Filter by Divisions ▼' +
                         '</button>' +
+                        '<div class="dropdown-content" id="divisionDropdown">' +
+                            '<div class="dropdown-header">' +
+                                '<strong>Select Divisions:</strong>' +
+                            '</div>' +
+                            '<div class="division-checkboxes">' +
+                                divisionsHTML +
+                            '</div>' +
+                        '</div>' +
                         '<button type="button" class="operator-btn ' + operatorClass + '" onclick="toggleOperator()">' +
                             currentOperator +
                         '</button>' +
@@ -631,10 +660,6 @@
             $('.custom-toolbar .dataTables_length select').on('change', function() {
                 $('#clientsTable').DataTable().page.len(this.value).draw();
             });
-
-            // Move the dropdown to the toolbar
-            var dropdown = $('#divisionDropdown');
-            $('.toolbar-left').append(dropdown);
         }
 
         function showTab(tabName) {
