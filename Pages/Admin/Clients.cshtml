@@ -49,8 +49,7 @@
                     {
                         <label class="division-checkbox">
                             <input type="checkbox" name="selectedDivisions" value="@division.Id"
-                            @(Model.DivisionFilter.SelectedDivisionIds.Contains(division.Id) ? "checked" : "")
-                                   onchange="document.getElementById('divisionFilterForm').submit()" />
+                            @(Model.DivisionFilter.SelectedDivisionIds.Contains(division.Id) ? "checked" : "") />
                             <span class="checkmark"></span>
                             @division.Name
                             <small>(@Model.Clients.Count(c => c.Divisions.Contains(division.Name)))</small>
@@ -59,7 +58,8 @@
                 </div>
 
                 <div class="filter-actions">
-                    <a href="@Url.Page("/Admin/Clients")" class="btn btn-secondary btn-sm">Clear Filters</a>
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="@Url.Page("/Admin/Clients")" class="btn btn-secondary">Clear Filters</a>
                 </div>
             </form>
         </div>
@@ -161,7 +161,7 @@
                 {
                     <tr class="@(signup.IsExpired ? "expired-row" : "")">
                         <td><strong>@signup.UserId</strong></td>
-                        <td>@signup.FirstName @signup.LastName</td>
+                        <td>@signup.LastName, @signup.FirstName</td>
                         <td>
                             <a href="mailto:@signup.Email" style="color: #007bff; text-decoration: none;">
                                 @signup.Email
@@ -279,7 +279,7 @@
             align-items: center;
         }
 
-        /* NEW: Division Filtering Styles */
+        /* Division Filtering Styles */
         .filter-panel {
             background: #f8f9fa;
             border: 1px solid #e9ecef;
@@ -365,7 +365,8 @@
             }
 
         .filter-actions {
-            text-align: right;
+            display: flex;
+            gap: 10px;
         }
 
         /* Division badges in table */
@@ -599,8 +600,7 @@
                 document.querySelector('.filter-help').textContent = 'Show clients with ALL selected divisions';
             }
 
-            // Auto-submit the form
-            document.getElementById('divisionFilterForm').submit();
+            // Note: No longer auto-submitting the form - user must click Apply
         }
 
         $(document).ready(function () {

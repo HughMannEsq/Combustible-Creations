@@ -38,10 +38,26 @@ namespace AutumnRidgeUSA.Models.Shared
             }
         }
 
-        // Optional: Full name property for convenience
+        // Updated: Full name property with lastName, firstName format
         [NotMapped]
-        public string FullName => $"{FirstName} {LastName}".Trim();
+        public string FullName
+        {
+            get
+            {
+                var lastName = LastName?.Trim() ?? "";
+                var firstName = FirstName?.Trim() ?? "";
 
-      
+                if (string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName))
+                    return "";
+
+                if (string.IsNullOrEmpty(lastName))
+                    return firstName;
+
+                if (string.IsNullOrEmpty(firstName))
+                    return lastName;
+
+                return $"{lastName}, {firstName}";
+            }
+        }
     }
 }
