@@ -606,7 +606,7 @@
         $(document).ready(function () {
             // Initialize DataTables for both tables
             $('#clientsTable').DataTable({
-                "order": [[6, "desc"]], // Sort by Signup Date (adjusted for new column)
+                "order": [[6, "desc"]], // Sort by Signup Date
                 "pageLength": 25,
                 "responsive": true,
                 "columnDefs": [
@@ -617,7 +617,10 @@
             $('#tempSignupsTable').DataTable({
                 "order": [[3, "desc"]], // Sort by Created date
                 "pageLength": 25,
-                "responsive": true
+                "responsive": true,
+                "columnDefs": [
+                    { "orderable": false, "targets": 5 } // Disable sorting on Actions column
+                ]
             });
         });
     </script>
