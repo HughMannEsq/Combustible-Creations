@@ -608,11 +608,8 @@
             if ($.fn.DataTable.isDataTable('#clientsTable')) {
                 $('#clientsTable').DataTable().destroy();
             }
-            if ($.fn.DataTable.isDataTable('#tempSignupsTable')) {
-                $('#tempSignupsTable').DataTable().destroy();
-            }
 
-            // Initialize DataTables for both tables
+            // Initialize DataTables only for clients table
             $('#clientsTable').DataTable({
                 "order": [[6, "desc"]], // Sort by Signup Date
                 "pageLength": 25,
@@ -622,20 +619,8 @@
                 ]
             });
 
-            // Initialize temp signups table with explicit column count
-            $('#tempSignupsTable').DataTable({
-                "order": [[3, "desc"]], // Sort by Created date
-                "pageLength": 25,
-                "responsive": true,
-                "columns": [
-                    { "title": "UserId" },
-                    { "title": "Name" },
-                    { "title": "Email" },
-                    { "title": "Created" },
-                    { "title": "Status" },
-                    { "title": "Actions", "orderable": false }
-                ]
-            });
+            // Don't initialize DataTables for tempSignupsTable - it has form elements that cause issues
+            // Just add basic styling instead
         });
     </script>
 }
