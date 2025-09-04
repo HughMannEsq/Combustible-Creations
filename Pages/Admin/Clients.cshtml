@@ -581,36 +581,39 @@
         });
 
         function createCustomToolbar() {
+            // Get current operator value from the hidden input
+            var currentOperator = document.getElementById('filterOperatorInput').value;
+            var operatorClass = currentOperator.toLowerCase();
+
             // Create the custom toolbar HTML
-            var toolbarHTML = `
-                <div class="custom-toolbar">
-                    <div class="toolbar-left">
-                        <div class="dataTables_filter">
-                            <label>Search: <input type="search" class="" placeholder="" aria-controls="clientsTable"></label>
-                        </div>
-                        <button type="button" class="filter-divisions-btn" onclick="toggleDivisionsDropdown()">
-                            Filter by Divisions ▼
-                        </button>
-                        <button type="button" class="operator-btn ${@Model.DivisionFilter.FilterOperator.ToLower()}" onclick="toggleOperator()">
-        @Model.DivisionFilter.FilterOperator
-                        </button>
-                        <button type="button" class="action-btn primary" onclick="applyFilters()">Apply Filters</button>
-                        <a href="@Url.Page("/Admin/Clients")" class="action-btn secondary">Clear Filters</a>
-                    </div>
-                    <div class="toolbar-right">
-                        <div class="dataTables_length">
-                            <label>Show
-                                <select name="clientsTable_length" aria-controls="clientsTable">
-                                    <option value="10">10</option>
-                                    <option value="25" selected="selected">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select> entries
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            `;
+            var toolbarHTML =
+                '<div class="custom-toolbar">' +
+                    '<div class="toolbar-left">' +
+                        '<div class="dataTables_filter">' +
+                            '<label>Search: <input type="search" class="" placeholder="" aria-controls="clientsTable"></label>' +
+                        '</div>' +
+                        '<button type="button" class="filter-divisions-btn" onclick="toggleDivisionsDropdown()">' +
+                            'Filter by Divisions ▼' +
+                        '</button>' +
+                        '<button type="button" class="operator-btn ' + operatorClass + '" onclick="toggleOperator()">' +
+                            currentOperator +
+                        '</button>' +
+                        '<button type="button" class="action-btn primary" onclick="applyFilters()">Apply Filters</button>' +
+                        '<a href="@Url.Page("/Admin/Clients")" class="action-btn secondary">Clear Filters</a>' +
+                    '</div>' +
+                    '<div class="toolbar-right">' +
+                        '<div class="dataTables_length">' +
+                            '<label>Show ' +
+                                '<select name="clientsTable_length" aria-controls="clientsTable">' +
+                                    '<option value="10">10</option>' +
+                                    '<option value="25" selected="selected">25</option>' +
+                                    '<option value="50">50</option>' +
+                                    '<option value="100">100</option>' +
+                                '</select> entries' +
+                            '</label>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
 
             // Replace DataTables' default controls with custom toolbar
             $('.dataTables_filter').parent().hide(); // Hide default search
