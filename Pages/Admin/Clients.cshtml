@@ -604,6 +604,14 @@
         }
 
         $(document).ready(function () {
+            // Destroy existing DataTables if they exist to prevent conflicts
+            if ($.fn.DataTable.isDataTable('#clientsTable')) {
+                $('#clientsTable').DataTable().destroy();
+            }
+            if ($.fn.DataTable.isDataTable('#tempSignupsTable')) {
+                $('#tempSignupsTable').DataTable().destroy();
+            }
+
             // Initialize DataTables for both tables
             $('#clientsTable').DataTable({
                 "order": [[6, "desc"]], // Sort by Signup Date
@@ -614,12 +622,18 @@
                 ]
             });
 
+            // Initialize temp signups table with explicit column count
             $('#tempSignupsTable').DataTable({
                 "order": [[3, "desc"]], // Sort by Created date
                 "pageLength": 25,
                 "responsive": true,
-                "columnDefs": [
-                    { "orderable": false, "targets": 5 } // Disable sorting on Actions column
+                "columns": [
+                    { "title": "UserId" },
+                    { "title": "Name" },
+                    { "title": "Email" },
+                    { "title": "Created" },
+                    { "title": "Status" },
+                    { "title": "Actions", "orderable": false }
                 ]
             });
         });
