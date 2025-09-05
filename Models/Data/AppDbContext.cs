@@ -13,7 +13,7 @@ namespace AutumnRidgeUSA.Data
 
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Client> Clients { get; set; } = null!;
-        public DbSet<StorageClient> StorageClients { get; set; } = null!;
+        public DbSet<StorageContract> StorageContracts { get; set; } = null!;
         public DbSet<TempSignup> TempSignups { get; set; } = null!;
 
         public DbSet<Division> Divisions { get; set; }
