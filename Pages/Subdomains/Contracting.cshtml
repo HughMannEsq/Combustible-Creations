@@ -1,4 +1,31 @@
 ﻿@page
-@model AutumnRidgeUSA.Pages.Subdomains.ContractingModel
 @{
+    ViewData["Title"] = "Contracting Services";
+    var subdomain = HttpContext.Items["Subdomain"]?.ToString() ?? "contracting";
 }
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1>Autumn Ridge USA - Contracting Division</h1>
+            <p class="lead">Professional contracting services for all your construction needs.</p>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h3>Our Services</h3>
+                    <ul>
+                        <li>General Contracting</li>
+                        <li>Commercial Construction</li>
+                        <li>Renovations & Remodeling</li>
+                        <li>Project Management</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h3>Get Started</h3>
+                    <p>Ready to begin your construction project?</p>
+                    <a href="/Auth/Register" class="btn btn-primary">Get a Quote</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

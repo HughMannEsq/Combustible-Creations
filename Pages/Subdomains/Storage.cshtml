@@ -1,4 +1,31 @@
 ﻿@page
-@model AutumnRidgeUSA.Pages.Subdomains.StorageModel
 @{
+    ViewData["Title"] = "Storage Services";
+    var subdomain = HttpContext.Items["Subdomain"]?.ToString() ?? "storage";
 }
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1>Autumn Ridge USA - Storage Division</h1>
+            <p class="lead">Secure storage solutions for your needs.</p>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h3>Storage Options</h3>
+                    <ul>
+                        <li>Climate Controlled Units</li>
+                        <li>Standard Storage Units</li>
+                        <li>Vehicle Storage</li>
+                        <li>Business Storage</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h3>Reserve Your Unit</h3>
+                    <p>Find the perfect storage solution for your needs.</p>
+                    <a href="/Auth/Register" class="btn btn-primary">Reserve Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

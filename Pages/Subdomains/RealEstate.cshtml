@@ -1,5 +1,33 @@
 ﻿@page
-@using AutumnRidgeUSA.Pages.Subdomains
-@model AutumnRidgeUSA.Pages.Subdomains.RealEstateModel
 @{
+    ViewData["Title"] = "Real Estate Services";
+    var subdomain = HttpContext.Items["Subdomain"]?.ToString() ?? "realestate";
 }
+
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1>Autumn Ridge USA - Real Estate Division</h1>
+            <p class="lead">Your trusted partner in buying, selling, and investing in real estate.</p>
+
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <h4>Buy</h4>
+                    <p>Find your dream home with our expert guidance.</p>
+                </div>
+                <div class="col-md-4">
+                    <h4>Sell</h4>
+                    <p>Get the best value for your property.</p>
+                </div>
+                <div class="col-md-4">
+                    <h4>Invest</h4>
+                    <p>Build wealth through real estate investments.</p>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="/Auth/Register" class="btn btn-primary">Find an Agent</a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -7,6 +7,8 @@
 
     // Check if this is a subdomain (not the main domain)
     var isSubdomain = false;
+    var subdomainName = "";
+    var subdomainDisplay = "";
 
     if (!isLocalhost)
     {
@@ -14,6 +16,11 @@
         // Examples: storage.autumnridge.com, realestate.autumnridge.com
         var parts = host.Split('.');
         isSubdomain = parts.Length > 2 && !host.StartsWith("www.");
+        if (isSubdomain)
+        {
+            subdomainName = parts[0];
+            subdomainDisplay = char.ToUpper(subdomainName[0]) + subdomainName.Substring(1);
+        }
     }
     else
     {
@@ -21,8 +28,30 @@
         // Examples: localhost/storage, localhost/realestate
         var pathSegments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         var subdomainPaths = new[] { "storage", "realestate", "contracting", "residential" };
-        isSubdomain = pathSegments.Length > 0 && subdomainPaths.Contains(pathSegments[0]);
+        if (pathSegments.Length > 0 && subdomainPaths.Contains(pathSegments[0]))
+        {
+            isSubdomain = true;
+            subdomainName = pathSegments[0];
+            subdomainDisplay = char.ToUpper(subdomainName[0]) + subdomainName.Substring(1);
+        }
     }
+
+    // Store subdomain info for other components to use
+    if (isSubdomain && HttpContextAccessor.HttpContext != null)
+    {
+        HttpContextAccessor.HttpContext.Items["Subdomain"] = subdomainName;
+        HttpContextAccessor.HttpContext.Items["SubdomainDisplay"] = subdomainDisplay;
+    }
+
+    // Division-specific information
+    var divisionInfo = subdomainName.ToLower() switch
+    {
+        "contracting" => "Professional construction and contracting services",
+        "realestate" => "Your trusted real estate partner",
+        "residential" => "Complete residential solutions",
+        "storage" => "Secure storage facilities",
+        _ => "Specialized services"
+    };
 
     // Updated navigation links for the banner
     var bannerLinks = new Dictionary<string, string>
@@ -52,7 +81,24 @@
     var currentSection = GetLocalSection(path);
 }
 
-@* Only show this banner on subdomains *@
+@* Show division banner if on a subdomain *@
+@if (isSubdomain && !string.IsNullOrEmpty(subdomainDisplay))
+{
+    <div class="alert alert-info mb-0" style="border-radius: 0;">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <strong>@subdomainDisplay Division</strong> - @divisionInfo
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <a href="/" class="btn btn-sm btn-outline-primary">View All Divisions</a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Only show navigation on subdomains *@
 @if (isSubdomain)
 {
     <nav class="navigation">

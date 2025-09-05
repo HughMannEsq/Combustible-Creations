@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Data;
 using AutumnRidgeUSA.Services;
+using AutumnRidgeUSA.Middleware; // Add this
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +65,9 @@ else
 app.UseStaticFiles();
 app.UseRouting();
 
+// Add subdomain routing middleware (optional - your banner handles detection)
+// app.UseMiddleware<SubdomainRoutingMiddleware>();
+
 // Add the impersonation middleware BEFORE authorization
 // NOTE: Remove this in production - it's a security risk!
 if (app.Environment.IsDevelopment())
@@ -92,14 +96,28 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 
-// Set up routing
+// Set up routing with subdomain support
+app.MapControllerRoute(
+    name: "subdomain",
+    pattern: "Subdomains/{subdomain}/{action=Index}",
+    defaults: new { controller = "Subdomain" });
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapGet("/", context =>
 {
-    context.Response.Redirect("/Home");
+    var subdomain = context.Items["Subdomain"]?.ToString();
+    if (!string.IsNullOrEmpty(subdomain))
+    {
+        // Redirect to subdomain-specific home
+        context.Response.Redirect($"/Subdomains/{char.ToUpper(subdomain[0]) + subdomain.Substring(1)}");
+    }
+    else
+    {
+        context.Response.Redirect("/Home");
+    }
     return Task.CompletedTask;
 });
 
