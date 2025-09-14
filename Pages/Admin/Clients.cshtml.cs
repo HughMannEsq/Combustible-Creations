@@ -68,7 +68,6 @@ namespace AutumnRidgeUSA.Pages.Admin
 
             try
             {
-                // First, find the user by UserId (string) and include their storage contracts
                 var user = await _context.Users
                     .Include(u => u.UserDivisions)
                         .ThenInclude(ud => ud.Division)
@@ -79,27 +78,11 @@ namespace AutumnRidgeUSA.Pages.Admin
                     return new JsonResult(new { success = false, message = "User not found" });
                 }
 
-                // Check if user has Storage division
-                var hasStorage = user.UserDivisions?.Any(ud =>
-                    ud.IsActive && ud.Division.Name == "Storage" && ud.Division.IsActive) ?? false;
-
-                if (!hasStorage)
-                {
-                    return new JsonResult(new { success = false, message = "User is not enrolled in Storage division" });
-                }
-
-                // Find ALL storage contracts for this user
                 var contracts = await _context.StorageContracts
                     .Where(sc => sc.UserId == user.Id)
                     .OrderByDescending(sc => sc.CreatedAt)
                     .ToListAsync();
 
-                if (!contracts.Any())
-                {
-                    return new JsonResult(new { success = false, message = "No storage contracts found for this user" });
-                }
-
-                // Return all contracts data
                 return new JsonResult(new
                 {
                     success = true,
@@ -260,6 +243,7 @@ namespace AutumnRidgeUSA.Pages.Admin
             return Page();
         }
 
+     
         private async Task LoadClientsAsync()
         {
             try
@@ -273,23 +257,17 @@ namespace AutumnRidgeUSA.Pages.Admin
                 // Apply division filtering if any divisions are selected
                 if (DivisionFilter.SelectedDivisionIds.Any())
                 {
-                    _logger.LogInformation("Applying division filter with {Count} divisions", DivisionFilter.SelectedDivisionIds.Count);
-
                     if (DivisionFilter.FilterOperator == "AND")
                     {
-                        // User must have ALL selected divisions
                         foreach (var divisionId in DivisionFilter.SelectedDivisionIds)
                         {
                             query = query.Where(u => u.UserDivisions.Any(ud => ud.DivisionId == divisionId && ud.IsActive));
                         }
-                        _logger.LogInformation("Applied AND filter for divisions");
                     }
                     else // OR
                     {
-                        // User must have ANY of the selected divisions
                         query = query.Where(u => u.UserDivisions.Any(ud =>
                             DivisionFilter.SelectedDivisionIds.Contains(ud.DivisionId) && ud.IsActive));
-                        _logger.LogInformation("Applied OR filter for divisions");
                     }
                 }
 
@@ -308,7 +286,6 @@ namespace AutumnRidgeUSA.Pages.Admin
                         ZipCode = u.ZipCode,
                         SignupDate = u.CreatedAt,
                         Balance = 0.0f,
-                        // Get division names for display
                         Divisions = string.Join(", ", u.UserDivisions
                             .Where(ud => ud.IsActive && ud.Division.IsActive)
                             .Select(ud => ud.Division.Name)
@@ -317,112 +294,13 @@ namespace AutumnRidgeUSA.Pages.Admin
                     .ToListAsync();
 
                 Clients = realClients;
-
-                _logger.LogInformation("Loaded {Count} clients after filtering", Clients.Count);
-
-                // Fallback to mock data if no real clients exist AND no filter is applied
-                if (!Clients.Any() && !DivisionFilter.SelectedDivisionIds.Any())
-                {
-                    _logger.LogInformation("No real clients found, using mock data for admin dashboard");
-                    Clients = GetMockClientData();
-
-                    // Apply filtering to mock data if needed
-                    if (DivisionFilter.SelectedDivisionIds.Any())
-                    {
-                        Clients = FilterMockData(Clients);
-                    }
-                }
-                else if (!Clients.Any() && DivisionFilter.SelectedDivisionIds.Any())
-                {
-                    // If filter is applied but no clients match, try filtering mock data
-                    _logger.LogInformation("No real clients match filter, checking mock data");
-                    var mockData = GetMockClientData();
-                    var filteredMockData = FilterMockData(mockData);
-
-                    if (filteredMockData.Any())
-                    {
-                        Clients = filteredMockData;
-                        _logger.LogInformation("Using filtered mock data: {Count} clients", Clients.Count);
-                    }
-                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to load clients from database, falling back to mock data");
-                Clients = GetMockClientData();
-
-                // Apply filtering to mock data if needed
-                if (DivisionFilter.SelectedDivisionIds.Any())
-                {
-                    Clients = FilterMockData(Clients);
-                }
-
-                Clients.Insert(0, new Client
-                {
-                    UserId = "ERROR",
-                    FirstName = "Database",
-                    LastName = "Error",
-                    Email = "admin@autumnridgeusa.com",
-                    SignupDate = DateTime.UtcNow,
-                    PhoneNumber = "Check logs",
-                    Address = "Database connection failed",
-                    City = "Error",
-                    State = "DB",
-                    ZipCode = "00000",
-                    Balance = 0.0f,
-                    Divisions = "Error"
-                });
+                _logger.LogError(ex, "Failed to load clients from database");
+                Clients = new List<Client>();
             }
         }
-
-        private List<Client> FilterMockData(List<Client> mockClients)
-        {
-            if (!DivisionFilter.SelectedDivisionIds.Any())
-                return mockClients;
-
-            // Get selected division names
-            var selectedDivisionNames = DivisionFilter.AvailableDivisions
-                .Where(d => DivisionFilter.SelectedDivisionIds.Contains(d.Id))
-                .Select(d => d.Name)
-                .ToList();
-
-            _logger.LogInformation("Filtering mock data for divisions: {Divisions}", string.Join(", ", selectedDivisionNames));
-
-            var filteredClients = new List<Client>();
-
-            foreach (var client in mockClients)
-            {
-                if (string.IsNullOrEmpty(client.Divisions))
-                    continue;
-
-                var clientDivisions = client.Divisions.Split(',').Select(d => d.Trim()).ToList();
-
-                bool matches = false;
-                if (DivisionFilter.FilterOperator == "AND")
-                {
-                    // Client must have ALL selected divisions
-                    matches = selectedDivisionNames.All(selectedDiv =>
-                        clientDivisions.Any(clientDiv =>
-                            string.Equals(clientDiv, selectedDiv, StringComparison.OrdinalIgnoreCase)));
-                }
-                else // OR
-                {
-                    // Client must have ANY of the selected divisions
-                    matches = selectedDivisionNames.Any(selectedDiv =>
-                        clientDivisions.Any(clientDiv =>
-                            string.Equals(clientDiv, selectedDiv, StringComparison.OrdinalIgnoreCase)));
-                }
-
-                if (matches)
-                {
-                    filteredClients.Add(client);
-                }
-            }
-
-            _logger.LogInformation("Mock data filter result: {Count} clients match", filteredClients.Count);
-            return filteredClients;
-        }
-
         private async Task LoadTempSignupsAsync()
         {
             try
@@ -485,53 +363,6 @@ namespace AutumnRidgeUSA.Pages.Admin
             }
         }
 
-        private List<Client> GetMockClientData()
-        {
-            return new List<Client>
-            {
-                new Client {
-                    UserId = "6328-XHN",
-                    FirstName = "Alice",
-                    LastName = "Smith",
-                    Email = "alice@example.com",
-                    SignupDate = DateTime.UtcNow.AddDays(-10),
-                    PhoneNumber = "555-1234",
-                    Address = "123 Main St",
-                    City = "Battle Creek",
-                    State = "MI",
-                    ZipCode = "49017",
-                    Balance = 123.45f,
-                    Divisions = "Storage, Real Estate"
-                },
-                new Client {
-                    UserId = "3829-IFV",
-                    FirstName = "Bob",
-                    LastName = "Sackley",
-                    Email = "bob@example.com",
-                    SignupDate = DateTime.UtcNow.AddDays(-5),
-                    PhoneNumber = "555-5678",
-                    Address = "456 Oak Ave",
-                    City = "Kalamazoo",
-                    State = "MI",
-                    ZipCode = "49001",
-                    Balance = 67.89f,
-                    Divisions = "Contracting"
-                },
-                new Client {
-                    UserId = "7832-HIG",
-                    FirstName = "Carlos",
-                    LastName = "Hogan",
-                    Email = "carlos@example.com",
-                    SignupDate = DateTime.UtcNow.AddDays(-1),
-                    PhoneNumber = "555-8538",
-                    Address = "789 Pine St",
-                    City = "Grand Rapids",
-                    State = "MI",
-                    ZipCode = "49503",
-                    Balance = 167.80f,
-                    Divisions = "Storage, Contracting, Real Estate"
-                }
-            };
-        }
+        
     }
 }
