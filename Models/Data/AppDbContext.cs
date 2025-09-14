@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Models;
-using AutumnRidgeUSA.Models.Shared;
 using AutumnRidgeUSA.Models.Storage;
 
 namespace AutumnRidgeUSA.Data
@@ -12,12 +11,12 @@ namespace AutumnRidgeUSA.Data
         }
 
         public DbSet<User> Users { get; set; } = null!;
-        public DbSet<Client> Clients { get; set; } = null!;
+        // REMOVED: DbSet<Client> - Client is not a database entity
         public DbSet<StorageContract> StorageContracts { get; set; } = null!;
         public DbSet<TempSignup> TempSignups { get; set; } = null!;
+        public DbSet<Division> Divisions { get; set; } = null!;
+        public DbSet<UserDivision> UserDivisions { get; set; } = null!;
 
-        public DbSet<Division> Divisions { get; set; }
-        public DbSet<UserDivision> UserDivisions { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Configure User entity
@@ -40,6 +39,18 @@ namespace AutumnRidgeUSA.Data
                 entity.Property(e => e.FirstName).HasMaxLength(50);
                 entity.Property(e => e.LastName).HasMaxLength(50);
                 entity.Property(e => e.UserId).HasMaxLength(20);
+            });
+
+            // Configure StorageContract entity
+            modelBuilder.Entity<StorageContract>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.UserId).IsUnique();
+
+                entity.HasOne(sc => sc.User)
+                    .WithOne()
+                    .HasForeignKey<StorageContract>(sc => sc.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Division configurations
