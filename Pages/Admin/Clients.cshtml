@@ -39,7 +39,145 @@
             <h3>Registered Clients</h3>
             <p>Total clients: @Model.Clients.Count</p>
         </div>
+        <!-- Add this after the tab-header div in your clients tab -->
+        <div class="custom-toolbar">
+            <div class="toolbar-left">
+                <div class="dropdown-container">
+                    <button type="button" class="filter-divisions-btn" id="filterDivisionsBtn" onclick="toggleDivisionDropdown()">
+                        <span id="filterButtonText">
+                            @if (Model.DivisionFilter.SelectedDivisionIds.Any())
+                            {
+                                @($"Filter by Divisions ({Model.DivisionFilter.SelectedDivisionIds.Count} selected)")
+                            }
+                            else
+                            {
+                                @("Filter by Divisions")
+                            }
+                        </span>
+                        <span style="margin-left: 5px;">▼</span>
+                    </button>
 
+                    <div class="dropdown-content" id="divisionDropdown">
+                        <div class="dropdown-header">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Filter by Divisions</span>
+                                <button type="button" class="operator-btn @(Model.DivisionFilter.FilterOperator.ToLower())"
+                                        onclick="toggleFilterOperator()">
+                                    @Model.DivisionFilter.FilterOperator
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="division-checkboxes">
+                            @foreach (var division in Model.DivisionFilter.AvailableDivisions)
+                            {
+                                <label class="division-checkbox">
+                                    <input type="checkbox"
+                                           name="division-@division.Id"
+                                           value="@division.Id"
+                                    @(Model.DivisionFilter.SelectedDivisionIds.Contains(division.Id) ? "checked" : "")
+                                           onchange="updateDivisionFilter()" />
+                                    @division.Name
+                                </label>
+                            }
+                        </div>
+
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                            <button type="button" onclick="clearAllFilters()" class="action-btn secondary" style="margin-right: 10px;">
+                                Clear All
+                            </button>
+                            <button type="button" onclick="applyDivisionFilter()" class="action-btn primary">
+                                Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar-right">
+                <a href="/Admin/ImportExcel" class="action-btn primary">Import Excel</a>
+            </div>
+        </div>
+
+        <script>
+            let currentFilterOperator = '@Model.DivisionFilter.FilterOperator';
+
+            function toggleDivisionDropdown() {
+                const dropdown = document.getElementById('divisionDropdown');
+                dropdown.classList.toggle('show');
+            }
+
+            function toggleFilterOperator() {
+                const btn = document.querySelector('.operator-btn');
+                if (currentFilterOperator === 'AND') {
+                    currentFilterOperator = 'OR';
+                    btn.textContent = 'OR';
+                    btn.className = 'operator-btn or';
+                } else {
+                    currentFilterOperator = 'AND';
+                    btn.textContent = 'AND';
+                    btn.className = 'operator-btn and';
+                }
+                document.getElementById('filterOperatorInput').value = currentFilterOperator;
+            }
+
+            function updateDivisionFilter() {
+                const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]');
+                const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+                const filterBtn = document.getElementById('filterDivisionsBtn');
+                const filterText = document.getElementById('filterButtonText');
+
+                if (selectedCount > 0) {
+                    filterBtn.classList.add('active');
+                    filterText.textContent = `Filter by Divisions (${selectedCount} selected)`;
+                } else {
+                    filterBtn.classList.remove('active');
+                    filterText.textContent = 'Filter by Divisions';
+                }
+            }
+
+            function clearAllFilters() {
+                const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = false);
+                updateDivisionFilter();
+            }
+
+            function applyDivisionFilter() {
+                const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]:checked');
+                const selectedDivisions = Array.from(checkboxes).map(cb => cb.value);
+
+                // Update hidden form
+                const hiddenCheckboxes = document.querySelectorAll('#divisionFilterForm input[name="selectedDivisions"]');
+                hiddenCheckboxes.forEach(cb => cb.checked = false);
+
+                selectedDivisions.forEach(divisionId => {
+                    const hiddenCheckbox = document.querySelector(`#hidden-${divisionId}`);
+                    if (hiddenCheckbox) {
+                        hiddenCheckbox.checked = true;
+                    }
+                });
+
+                // Update filter operator
+                document.getElementById('filterOperatorInput').value = currentFilterOperator;
+
+                // Submit the form
+                document.getElementById('divisionFilterForm').submit();
+
+                // Close dropdown
+                document.getElementById('divisionDropdown').classList.remove('show');
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                const dropdown = document.getElementById('divisionDropdown');
+                const button = document.getElementById('filterDivisionsBtn');
+
+                if (!dropdown.contains(event.target) && !button.contains(event.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+        </script>
         <!-- Hidden Division Filtering Form -->
         <form method="get" id="divisionFilterForm" style="display: none;">
             <input type="hidden" name="filterOperator" id="filterOperatorInput" value="@Model.DivisionFilter.FilterOperator" />
