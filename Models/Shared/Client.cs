@@ -1,62 +1,33 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
+﻿// Models/Shared/Client.cs
 namespace AutumnRidgeUSA.Models.Shared
 {
     public class Client
     {
-        [Key]
+        // Basic client properties
         public string UserId { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
         public string? City { get; set; }
         public string? State { get; set; }
         public string? ZipCode { get; set; }
-        public string Email { get; set; } = string.Empty;
-        public float Balance { get; set; }
         public DateTime SignupDate { get; set; }
-
+        public float Balance { get; set; }
         public string Divisions { get; set; } = string.Empty;
 
-        // Computed property that combines all address fields for dashboard display
-        [NotMapped] // This tells Entity Framework not to create a database column for this property
+        // Computed properties
+        public string FullName => $"{FirstName} {LastName}";
+
         public string FullAddress
         {
             get
             {
-                var addressParts = new[]
-                {
-                    Address?.Trim(),
-                    City?.Trim(),
-                    State?.Trim(),
-                    ZipCode?.Trim()
-                }.Where(part => !string.IsNullOrEmpty(part));
+                if (string.IsNullOrEmpty(Address))
+                    return string.Empty;
 
-                return string.Join(", ", addressParts);
-            }
-        }
-
-        // Updated: Full name property with lastName, firstName format
-        [NotMapped]
-        public string FullName
-        {
-            get
-            {
-                var lastName = LastName?.Trim() ?? "";
-                var firstName = FirstName?.Trim() ?? "";
-
-                if (string.IsNullOrEmpty(lastName) && string.IsNullOrEmpty(firstName))
-                    return "";
-
-                if (string.IsNullOrEmpty(lastName))
-                    return firstName;
-
-                if (string.IsNullOrEmpty(firstName))
-                    return lastName;
-
-                return $"{lastName}, {firstName}";
+                return $"{Address}, {City}, {State} {ZipCode}";
             }
         }
     }

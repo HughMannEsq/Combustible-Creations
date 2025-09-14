@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Railway port configuration - Railway sets PORT environment variable
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+builder.Services.AddScoped<ExcelImportService>();
 
 // Add services to the container - ALL services must be added BEFORE builder.Build()
 

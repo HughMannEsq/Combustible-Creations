@@ -13,6 +13,19 @@
     </div>
 }
 
+<!-- Storage Contract Modal -->
+<div id="storageModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Contract Details</h3>
+            <span class="close" onclick="closeStorageModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="storageModalBody">
+            <!-- Content will be dynamically inserted here -->
+        </div>
+    </div>
+</div>
+
 <!-- Tab Navigation -->
 <div class="tab-container">
     <div class="tab-buttons">
@@ -27,7 +40,7 @@
             <p>Total clients: @Model.Clients.Count</p>
         </div>
 
-        <!-- Hidden Division Filtering Form (kept for form submission) -->
+        <!-- Hidden Division Filtering Form -->
         <form method="get" id="divisionFilterForm" style="display: none;">
             <input type="hidden" name="filterOperator" id="filterOperatorInput" value="@Model.DivisionFilter.FilterOperator" />
             @foreach (var division in Model.DivisionFilter.AvailableDivisions)
@@ -79,8 +92,11 @@
                                 <div class="divisions-cell">
                                     @foreach (var division in client.Divisions.Split(','))
                                     {
-                                        <span class="division-badge division-@division.Trim().ToLower().Replace(" ", "")">
-                                            @division.Trim()
+                                        var divName = division.Trim();
+                                        var divClass = divName.ToLower().Replace(" ", "");
+
+                                        <span class="division-badge division-@divClass">
+                                            @divName
                                         </span>
                                     }
                                 </div>
@@ -198,6 +214,60 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
 
     <style>
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 0;
+            border: 1px solid #888;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            background-color: #1e3a5f;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .modal-header h3 {
+                margin: 0;
+            }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 20px;
+        }
+
+            .close:hover {
+                color: #f0f0f0;
+            }
+
+        .modal-body {
+            padding: 20px;
+        }
+
         /* Tab Styles */
         .tab-container {
             margin-top: 20px;
@@ -253,166 +323,7 @@
             align-items: center;
         }
 
-        /* Custom Toolbar Styles */
-        .custom-toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .toolbar-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            position: relative;
-        }
-
-        .toolbar-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* Filter Divisions Button and Dropdown */
-        .filter-divisions-btn {
-            padding: 8px 16px;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-            .filter-divisions-btn:hover {
-                background-color: #e9ecef;
-                border-color: #1e3a5f;
-            }
-
-            .filter-divisions-btn.active {
-                background-color: #1e3a5f;
-                color: white;
-                border-color: #1e3a5f;
-            }
-
-        .dropdown-container {
-            position: relative;
-        }
-
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            top: calc(100% + 5px);
-            left: 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 15px;
-            z-index: 1000;
-            min-width: 350px;
-            max-width: 500px;
-        }
-
-            .dropdown-content.show {
-                display: block;
-            }
-
-        .dropdown-header {
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-            font-weight: 600;
-            color: #1e3a5f;
-        }
-
-        .dropdown-content .division-checkboxes {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .dropdown-content .division-checkbox {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-            .dropdown-content .division-checkbox:hover {
-                background-color: #e3f2fd;
-                border-color: #1e3a5f;
-            }
-
-            .dropdown-content .division-checkbox input[type="checkbox"] {
-                margin-right: 8px;
-                cursor: pointer;
-            }
-
-        /* Operator Button */
-        .operator-btn {
-            padding: 6px 12px;
-            border-radius: 20px;
-            border: none;
-            font-weight: bold;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-        }
-
-            .operator-btn.and {
-                background-color: #dc3545;
-                color: white;
-            }
-
-            .operator-btn.or {
-                background-color: #28a745;
-                color: white;
-            }
-
-        /* Action Buttons */
-        .action-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            font-weight: 500;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.2s;
-        }
-
-            .action-btn.primary {
-                background-color: #007bff;
-                color: white;
-            }
-
-                .action-btn.primary:hover {
-                    background-color: #0056b3;
-                }
-
-            .action-btn.secondary {
-                background-color: #6c757d;
-                color: white;
-            }
-
-                .action-btn.secondary:hover {
-                    background-color: #545b62;
-                }
-
-        /* Division badges in table */
+        /* Division badges */
         .divisions-cell {
             display: flex;
             gap: 4px;
@@ -446,7 +357,7 @@
             border: 1px solid #c8e6c9;
         }
 
-        /* Table Styling */
+        /* Table Styles */
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -478,10 +389,6 @@
         .expired-row {
             background-color: #ffe6e6;
         }
-
-            .expired-row:hover {
-                background-color: #ffcccc;
-            }
 
         .no-data {
             text-align: center;
@@ -518,7 +425,7 @@
             font-weight: bold;
         }
 
-        /* Button Styling */
+        /* Button Styles */
         .btn {
             padding: 6px 12px;
             border: none;
@@ -541,72 +448,14 @@
             color: white;
         }
 
-            .btn-danger:hover {
-                background-color: #c82333;
-            }
-
         .btn-primary {
             background-color: #007bff;
             color: white;
         }
 
-            .btn-primary:hover {
-                background-color: #0056b3;
-            }
-
         .btn-warning {
             background-color: #ffc107;
             color: #212529;
-        }
-
-            .btn-warning:hover {
-                background-color: #e0a800;
-            }
-
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-        }
-
-            .btn-secondary:hover {
-                background-color: #545b62;
-            }
-
-        /* Alert Styling */
-        .alert {
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 4px;
-            border: 1px solid transparent;
-        }
-
-        .alert-info {
-            background-color: #d1ecf1;
-            border-color: #bee5eb;
-            color: #0c5460;
-        }
-
-        /* DataTables Integration */
-        .dataTables_filter label {
-            margin-bottom: 0;
-        }
-
-        .dataTables_filter input {
-            margin-left: 0.5em;
-            padding: 5px 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-
-        .dataTables_length label {
-            margin-bottom: 0;
-        }
-
-        .dataTables_length select {
-            margin: 0 0.5em;
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
         }
 
         .text-muted {
@@ -616,169 +465,30 @@
     </style>
 
     <script>
-        var dataTable;
-        var divisionsData = @Html.Raw(Json.Serialize(Model.DivisionFilter.AvailableDivisions.Select(d => new
-            {
-                Id = d.Id,
-                Name = d.Name,
-                Count = Model.Clients.Count(c => c.Divisions.Contains(d.Name)),
-                Selected = Model.DivisionFilter.SelectedDivisionIds.Contains(d.Id)
-            })));
-
-        $(document).ready(function () {
-            // Initialize DataTable
-            dataTable = $('#clientsTable').DataTable({
-                "order": [[6, "desc"]],
-                "pageLength": 25,
-                "dom": 'rt<"bottom"ip><"clear">' // Remove default controls
-            });
-
-            // Create custom toolbar
-            createCustomToolbar();
-        });
-
-        function createCustomToolbar() {
-            var currentOperator = $('#filterOperatorInput').val() || 'OR';
-
-            // Build custom toolbar HTML
-            var toolbarHTML =
-                '<div class="custom-toolbar">' +
-                    '<div class="toolbar-left">' +
-                        '<div class="dataTables_filter">' +
-                            '<label>Search: <input type="search" id="customSearch" placeholder="Type to search..."></label>' +
-                        '</div>' +
-                        '<div class="dropdown-container">' +
-                            '<button type="button" class="filter-divisions-btn" onclick="toggleDivisionsDropdown()">' +
-                                'Filter by Divisions ▼' +
-                            '</button>' +
-                            '<div class="dropdown-content" id="divisionDropdown">' +
-                                '<div class="dropdown-header">' +
-                                    '<strong>Select Divisions:</strong>' +
-                                '</div>' +
-                                '<div class="division-checkboxes" id="dropdownDivisions"></div>' +
-                            '</div>' +
-                        '</div>' +
-                        '<button type="button" class="operator-btn ' + currentOperator.toLowerCase() + '" id="operatorBtn" onclick="toggleOperator()">' +
-                            currentOperator +
-                        '</button>' +
-                        '<button type="button" class="action-btn primary" onclick="applyFilters()">Apply Filters</button>' +
-                        '<a href="@Url.Page("/Admin/Clients")" class="action-btn secondary">Clear Filters</a>' +
-                    '</div>' +
-                    '<div class="toolbar-right">' +
-                        '<div class="dataTables_length">' +
-                            '<label>Show ' +
-                                '<select id="customLength">' +
-                                    '<option value="10">10</option>' +
-                                    '<option value="25" selected>25</option>' +
-                                    '<option value="50">50</option>' +
-                                    '<option value="100">100</option>' +
-                                '</select> entries' +
-                            '</label>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
-
-            // Insert toolbar before table
-            $('#clientsTable_wrapper').prepend(toolbarHTML);
-
-            // Populate division checkboxes
-            populateDivisionDropdown();
-
-            // Wire up custom search
-            $('#customSearch').on('keyup', function() {
-                dataTable.search(this.value).draw();
-            });
-
-            // Wire up custom length selector
-            $('#customLength').on('change', function() {
-                dataTable.page.len(this.value).draw();
-            });
-        }
-
-        function populateDivisionDropdown() {
-            var dropdownContainer = $('#dropdownDivisions');
-            dropdownContainer.empty();
-
-            for (var i = 0; i < divisionsData.length; i++) {
-                var division = divisionsData[i];
-                var dropdownItem =
-                    '<label class="division-checkbox">' +
-                        '<input type="checkbox" value="' + division.id + '" ' +
-                        (division.selected ? 'checked' : '') +
-                        ' onchange="syncCheckbox(' + division.id + ', this.checked)">' +
-                        division.name + ' (' + division.count + ')' +
-                    '</label>';
-
-                dropdownContainer.append(dropdownItem);
-            }
-        }
-
-        function syncCheckbox(divisionId, checked) {
-            // Sync with hidden form checkbox
-            $('#hidden-' + divisionId).prop('checked', checked);
-        }
-
-        function toggleDivisionsDropdown() {
-            var dropdown = $('#divisionDropdown');
-            var btn = $('.filter-divisions-btn');
-
-            if (dropdown.hasClass('show')) {
-                dropdown.removeClass('show');
-                btn.removeClass('active');
-            } else {
-                dropdown.addClass('show');
-                btn.addClass('active');
-            }
-        }
-
-        function toggleOperator() {
-            var operatorBtn = $('#operatorBtn');
-            var operatorInput = $('#filterOperatorInput');
-
-            if (operatorInput.val() === 'AND') {
-                operatorInput.val('OR');
-                operatorBtn.text('OR');
-                operatorBtn.removeClass('and').addClass('or');
-            } else {
-                operatorInput.val('AND');
-                operatorBtn.text('AND');
-                operatorBtn.removeClass('or').addClass('and');
-            }
-        }
-
-        function applyFilters() {
-            $('#divisionFilterForm').submit();
+        function closeStorageModal() {
+            document.getElementById('storageModal').style.display = 'none';
         }
 
         function showTab(tabName) {
-            // Hide all tab contents
             $('.tab-content').removeClass('active');
-
-            // Remove active class from all buttons
             $('.tab-button').removeClass('active');
-
-            // Show selected tab
             $('#' + tabName + '-tab').addClass('active');
-
-            // Add active class to clicked button
             $(event.target).addClass('active');
         }
 
-        // Close dropdown when clicking outside
-        $(document).on('click', function(event) {
-            var dropdown = $('#divisionDropdown');
-            var btn = $('.filter-divisions-btn');
-            var dropdownContainer = $('.dropdown-container');
+        $(document).ready(function () {
+            $('#clientsTable').DataTable({
+                "order": [[6, "desc"]],
+                "pageLength": 25
+            });
+        });
 
-            if (!dropdownContainer.is(event.target) && dropdownContainer.has(event.target).length === 0) {
-                dropdown.removeClass('show');
-                btn.removeClass('active');
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('storageModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
             }
-        });
-
-        // Prevent dropdown from closing when clicking inside
-        $('#divisionDropdown').on('click', function(event) {
-            event.stopPropagation();
-        });
+        }
     </script>
 }
