@@ -1,8 +1,7 @@
-// Updated Pages/Admin/Clients.cshtml.cs
-
 using AutumnRidgeUSA.Models.Shared;
 using AutumnRidgeUSA.Models;
 using AutumnRidgeUSA.Models.ViewModels;
+using AutumnRidgeUSA.Models.Storage;
 using AutumnRidgeUSA.Data;
 using AutumnRidgeUSA.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -56,6 +55,76 @@ namespace AutumnRidgeUSA.Pages.Admin
             await LoadTempSignupsAsync();
 
             return Page();
+        }
+
+        // NEW: Handler for storage contract modal
+        public async Task<IActionResult> OnGetStorageContractAsync(string userId)
+        {
+            var role = Request.Cookies["ImpersonatedRole"] ?? "Guest";
+            if (role != "Admin")
+            {
+                return new JsonResult(new { success = false, message = "Unauthorized" });
+            }
+
+            try
+            {
+                // First, find the user by UserId (string) and include their storage contracts
+                var user = await _context.Users
+                    .Include(u => u.UserDivisions)
+                        .ThenInclude(ud => ud.Division)
+                    .FirstOrDefaultAsync(u => u.UserId == userId);
+
+                if (user == null)
+                {
+                    return new JsonResult(new { success = false, message = "User not found" });
+                }
+
+                // Check if user has Storage division
+                var hasStorage = user.UserDivisions?.Any(ud =>
+                    ud.IsActive && ud.Division.Name == "Storage" && ud.Division.IsActive) ?? false;
+
+                if (!hasStorage)
+                {
+                    return new JsonResult(new { success = false, message = "User is not enrolled in Storage division" });
+                }
+
+                // Find ALL storage contracts for this user
+                var contracts = await _context.StorageContracts
+                    .Where(sc => sc.UserId == user.Id)
+                    .OrderByDescending(sc => sc.CreatedAt)
+                    .ToListAsync();
+
+                if (!contracts.Any())
+                {
+                    return new JsonResult(new { success = false, message = "No storage contracts found for this user" });
+                }
+
+                // Return all contracts data
+                return new JsonResult(new
+                {
+                    success = true,
+                    contracts = contracts.Select(contract => new
+                    {
+                        id = contract.Id,
+                        userId = userId,
+                        lockerId = contract.LockerId,
+                        securityDeposit = contract.SecurityDeposit,
+                        securityDepositReceived = contract.SecurityDepositReceived,
+                        monthlyPayment = contract.MonthlyPayment,
+                        paymentMethod = contract.PaymentMethod,
+                        isActive = contract.IsActive,
+                        contractStartDate = contract.ContractStartDate?.ToString("yyyy-MM-dd"),
+                        contractEndDate = contract.ContractEndDate?.ToString("yyyy-MM-dd"),
+                        createdAt = contract.CreatedAt.ToString("yyyy-MM-dd"),
+                        updatedAt = contract.UpdatedAt?.ToString("yyyy-MM-dd")
+                    }).ToArray()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching storage contracts for user {UserId}", userId);
+                return new JsonResult(new { success = false, message = "Error loading contract details" });
+            }
         }
 
         // Rest of your existing POST methods remain the same...

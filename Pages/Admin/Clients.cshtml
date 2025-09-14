@@ -39,7 +39,8 @@
             <h3>Registered Clients</h3>
             <p>Total clients: @Model.Clients.Count</p>
         </div>
-        <!-- Add this after the tab-header div in your clients tab -->
+
+        <!-- Division Filter Toolbar -->
         <div class="custom-toolbar">
             <div class="toolbar-left">
                 <div class="dropdown-container">
@@ -99,85 +100,6 @@
             </div>
         </div>
 
-        <script>
-            let currentFilterOperator = '@Model.DivisionFilter.FilterOperator';
-
-            function toggleDivisionDropdown() {
-                const dropdown = document.getElementById('divisionDropdown');
-                dropdown.classList.toggle('show');
-            }
-
-            function toggleFilterOperator() {
-                const btn = document.querySelector('.operator-btn');
-                if (currentFilterOperator === 'AND') {
-                    currentFilterOperator = 'OR';
-                    btn.textContent = 'OR';
-                    btn.className = 'operator-btn or';
-                } else {
-                    currentFilterOperator = 'AND';
-                    btn.textContent = 'AND';
-                    btn.className = 'operator-btn and';
-                }
-                document.getElementById('filterOperatorInput').value = currentFilterOperator;
-            }
-
-            function updateDivisionFilter() {
-                const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]');
-                const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-
-                const filterBtn = document.getElementById('filterDivisionsBtn');
-                const filterText = document.getElementById('filterButtonText');
-
-                if (selectedCount > 0) {
-                    filterBtn.classList.add('active');
-                    filterText.textContent = `Filter by Divisions (${selectedCount} selected)`;
-                } else {
-                    filterBtn.classList.remove('active');
-                    filterText.textContent = 'Filter by Divisions';
-                }
-            }
-
-            function clearAllFilters() {
-                const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]');
-                checkboxes.forEach(cb => cb.checked = false);
-                updateDivisionFilter();
-            }
-
-            function applyDivisionFilter() {
-                const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]:checked');
-                const selectedDivisions = Array.from(checkboxes).map(cb => cb.value);
-
-                // Update hidden form
-                const hiddenCheckboxes = document.querySelectorAll('#divisionFilterForm input[name="selectedDivisions"]');
-                hiddenCheckboxes.forEach(cb => cb.checked = false);
-
-                selectedDivisions.forEach(divisionId => {
-                    const hiddenCheckbox = document.querySelector(`#hidden-${divisionId}`);
-                    if (hiddenCheckbox) {
-                        hiddenCheckbox.checked = true;
-                    }
-                });
-
-                // Update filter operator
-                document.getElementById('filterOperatorInput').value = currentFilterOperator;
-
-                // Submit the form
-                document.getElementById('divisionFilterForm').submit();
-
-                // Close dropdown
-                document.getElementById('divisionDropdown').classList.remove('show');
-            }
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(event) {
-                const dropdown = document.getElementById('divisionDropdown');
-                const button = document.getElementById('filterDivisionsBtn');
-
-                if (!dropdown.contains(event.target) && !button.contains(event.target)) {
-                    dropdown.classList.remove('show');
-                }
-            });
-        </script>
         <!-- Hidden Division Filtering Form -->
         <form method="get" id="divisionFilterForm" style="display: none;">
             <input type="hidden" name="filterOperator" id="filterOperatorInput" value="@Model.DivisionFilter.FilterOperator" />
@@ -233,9 +155,20 @@
                                         var divName = division.Trim();
                                         var divClass = divName.ToLower().Replace(" ", "");
 
-                                        <span class="division-badge division-@divClass">
-                                            @divName
-                                        </span>
+                                        @if (divName.Equals("Storage", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="division-badge division-@divClass clickable-storage"
+                                                  onclick="openStorageModal('@client.UserId')"
+                                                  style="cursor: pointer;">
+                                                @divName
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="division-badge division-@divClass">
+                                                @divName
+                                            </span>
+                                        }
                                     }
                                 </div>
                             }
@@ -542,12 +475,14 @@
 
         .modal-content {
             background-color: #fefefe;
-            margin: 10% auto;
+            margin: 5% auto;
             padding: 0;
             border: 1px solid #888;
             border-radius: 8px;
-            width: 500px;
+            width: 700px;
             max-width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
@@ -579,6 +514,116 @@
 
         .modal-body {
             padding: 20px;
+        }
+
+        /* Storage Contract Modal Styles */
+        .clickable-storage {
+            transition: all 0.2s;
+        }
+
+            .clickable-storage:hover {
+                transform: scale(1.05);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+        .contracts-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+            .contracts-header h4 {
+                margin: 0 0 5px 0;
+                color: #1e3a5f;
+            }
+
+            .contracts-header p {
+                margin: 0;
+                color: #666;
+                font-style: italic;
+            }
+
+        .contract-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+            .contract-card.active {
+                border-color: #28a745;
+                background-color: #f8fff9;
+            }
+
+            .contract-card.inactive {
+                border-color: #dc3545;
+                background-color: #fff8f8;
+            }
+
+        .contract-header {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .contract-card.active .contract-header {
+            background-color: #d4edda;
+        }
+
+        .contract-card.inactive .contract-header {
+            background-color: #f8d7da;
+        }
+
+        .contract-header h5 {
+            margin: 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .contract-card .contract-details {
+            padding: 15px;
+        }
+
+        .contract-separator {
+            height: 1px;
+            background-color: #e9ecef;
+            margin: 10px 0;
+        }
+
+        .contract-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+            .detail-row label {
+                font-weight: bold;
+                color: #333;
+                min-width: 120px;
+            }
+
+            .detail-row span {
+                color: #666;
+                text-align: right;
+            }
+
+        .status-active {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .status-inactive {
+            color: #dc3545;
+            font-weight: bold;
         }
 
         /* Tab Styles */
@@ -778,10 +823,176 @@
     </style>
 
     <script>
+        let currentFilterOperator = '@Model.DivisionFilter.FilterOperator';
+
+        // Division Filter Functions
+        function toggleDivisionDropdown() {
+            const dropdown = document.getElementById('divisionDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function toggleFilterOperator() {
+            const btn = document.querySelector('.operator-btn');
+            if (currentFilterOperator === 'AND') {
+                currentFilterOperator = 'OR';
+                btn.textContent = 'OR';
+                btn.className = 'operator-btn or';
+            } else {
+                currentFilterOperator = 'AND';
+                btn.textContent = 'AND';
+                btn.className = 'operator-btn and';
+            }
+            document.getElementById('filterOperatorInput').value = currentFilterOperator;
+        }
+
+        function updateDivisionFilter() {
+            const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]');
+            const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+            const filterBtn = document.getElementById('filterDivisionsBtn');
+            const filterText = document.getElementById('filterButtonText');
+
+            if (selectedCount > 0) {
+                filterBtn.classList.add('active');
+                filterText.textContent = `Filter by Divisions (${selectedCount} selected)`;
+            } else {
+                filterBtn.classList.remove('active');
+                filterText.textContent = 'Filter by Divisions';
+            }
+        }
+
+        function clearAllFilters() {
+            const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateDivisionFilter();
+        }
+
+        function applyDivisionFilter() {
+            const checkboxes = document.querySelectorAll('#divisionDropdown input[type="checkbox"]:checked');
+            const selectedDivisions = Array.from(checkboxes).map(cb => cb.value);
+
+            // Update hidden form
+            const hiddenCheckboxes = document.querySelectorAll('#divisionFilterForm input[name="selectedDivisions"]');
+            hiddenCheckboxes.forEach(cb => cb.checked = false);
+
+            selectedDivisions.forEach(divisionId => {
+                const hiddenCheckbox = document.querySelector(`#hidden-${divisionId}`);
+                if (hiddenCheckbox) {
+                    hiddenCheckbox.checked = true;
+                }
+            });
+
+            // Update filter operator
+            document.getElementById('filterOperatorInput').value = currentFilterOperator;
+
+            // Submit the form
+            document.getElementById('divisionFilterForm').submit();
+
+            // Close dropdown
+            document.getElementById('divisionDropdown').classList.remove('show');
+        }
+
+        // Storage Modal Functions
+        function openStorageModal(userId) {
+            // Show loading state
+            document.getElementById('storageModalBody').innerHTML = '<div style="text-align: center; padding: 20px;"><i class="spinner"></i> Loading contract details...</div>';
+            document.getElementById('storageModal').style.display = 'block';
+
+            // Fetch storage contract details
+            fetch(`/Admin/Clients?handler=StorageContract&userId=${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayStorageContracts(data.contracts, userId);
+                    } else {
+                        document.getElementById('storageModalBody').innerHTML =
+                            `<div class="alert alert-warning">${data.message || 'No storage contracts found for this client.'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching storage contracts:', error);
+                    document.getElementById('storageModalBody').innerHTML =
+                        '<div class="alert alert-danger">Error loading contract details. Please try again.</div>';
+                });
+        }
+
+        function displayStorageContracts(contracts, userId) {
+            const modalBody = document.getElementById('storageModalBody');
+
+            if (!contracts || contracts.length === 0) {
+                modalBody.innerHTML = '<div class="alert alert-warning">No storage contracts found for this user.</div>';
+                return;
+            }
+
+            let contractsHtml = `
+                <div class="contracts-header">
+                    <h4>Storage Contracts for User ${userId}</h4>
+                    <p>${contracts.length} contract(s) found</p>
+                </div>
+            `;
+
+            contracts.forEach((contract, index) => {
+                contractsHtml += `
+                    <div class="contract-card ${contract.isActive ? 'active' : 'inactive'}">
+                        <div class="contract-header">
+                            <h5>Contract #${contract.id} ${contract.isActive ? '(Active)' : '(Inactive)'}</h5>
+                        </div>
+                        <div class="contract-details">
+                            <div class="detail-row">
+                                <label>Locker ID:</label>
+                                <span>${contract.lockerId || 'Not assigned'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <label>Security Deposit:</label>
+                                <span>${parseFloat(contract.securityDeposit || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <label>Deposit Status:</label>
+                                <span>${contract.securityDepositReceived || 'Pending'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <label>Monthly Payment:</label>
+                                <span>${parseFloat(contract.monthlyPayment || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <label>Payment Method:</label>
+                                <span>${contract.paymentMethod || 'Not specified'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <label>Contract Start:</label>
+                                <span>${contract.contractStartDate ? new Date(contract.contractStartDate).toLocaleDateString() : 'Not set'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <label>Contract End:</label>
+                                <span>${contract.contractEndDate ? new Date(contract.contractEndDate).toLocaleDateString() : 'Not set'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <label>Created:</label>
+                                <span>${new Date(contract.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            ${contract.updatedAt ? `
+                            <div class="detail-row">
+                                <label>Last Updated:</label>
+                                <span>${new Date(contract.updatedAt).toLocaleDateString()}</span>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                // Add separator between contracts (except for the last one)
+                if (index < contracts.length - 1) {
+                    contractsHtml += '<div class="contract-separator"></div>';
+                }
+            });
+
+            modalBody.innerHTML = contractsHtml;
+        }
+
         function closeStorageModal() {
             document.getElementById('storageModal').style.display = 'none';
         }
 
+        // Tab Functions
         function showTab(tabName) {
             $('.tab-content').removeClass('active');
             $('.tab-button').removeClass('active');
@@ -789,11 +1000,22 @@
             $(event.target).addClass('active');
         }
 
+        // Initialize DataTables and Event Listeners
         $(document).ready(function () {
             $('#clientsTable').DataTable({
                 "order": [[6, "desc"]],
                 "pageLength": 25
             });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('divisionDropdown');
+            const button = document.getElementById('filterDivisionsBtn');
+
+            if (!dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
         });
 
         // Close modal when clicking outside

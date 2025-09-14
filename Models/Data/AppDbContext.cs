@@ -41,15 +41,16 @@ namespace AutumnRidgeUSA.Data
                 entity.Property(e => e.UserId).HasMaxLength(20);
             });
 
-            // Configure StorageContract entity
+            // Configure StorageContract entity - UPDATED to allow multiple contracts per user
             modelBuilder.Entity<StorageContract>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.HasIndex(e => e.UserId).IsUnique();
+                // REMOVED: entity.HasIndex(e => e.UserId).IsUnique(); - Allow multiple contracts per user
 
+                // Change to one-to-many relationship (one user can have many storage contracts)
                 entity.HasOne(sc => sc.User)
-                    .WithOne()
-                    .HasForeignKey<StorageContract>(sc => sc.UserId)
+                    .WithMany() // User can have multiple storage contracts
+                    .HasForeignKey(sc => sc.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
