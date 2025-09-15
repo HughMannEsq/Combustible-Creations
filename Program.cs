@@ -28,6 +28,8 @@ else
         options.UseSqlite("Data Source=./app.db"));
 }
 
+// Add this line with your other service registrations:
+builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // For MVC controllers

@@ -5,6 +5,16 @@ namespace AutumnRidgeUSA.Models
 {
     public class User
     {
+
+        // For secure password hashing
+        [MaxLength(255)]
+        public string? Salt { get; set; }
+
+        // For tracking login activity  
+        public DateTime? LastLoginAt { get; set; }
+
+        [MaxLength(45)]  // IPv6 max length
+        public string? LastLoginIP { get; set; }
         [Key]
         public int Id { get; set; }
 
