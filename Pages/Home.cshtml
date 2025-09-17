@@ -38,7 +38,7 @@
                 {
                     <a href="#" id="signupLink">Sign Up</a>
                     <span style="color: #FFD700;">|</span>
-                    <a href="/Account/Login">Log In</a>
+                    <a href="#" id="loginLink">Log In</a>
                 }
                 @* CLIENT VIEW: Show account management and logout *@
                 else if (currentRole == "Client")
@@ -165,6 +165,45 @@
         </div>
     </div>
 
+    <!-- LOGIN MODAL: Only visible/functional when user is in Guest role -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <!-- Modal header with title and close button -->
+            <div class="modal-header">
+                <h2>Log In</h2>
+                <span class="close login-close">&times;</span>
+            </div>
+            <!-- Modal form content -->
+            <div class="modal-body">
+                <form id="loginForm">
+                    <!-- Email input field -->
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address:</label>
+                        <input type="email" id="loginEmail" name="email" required>
+                    </div>
+                    <!-- Password input field -->
+                    <div class="form-group">
+                        <label for="loginPassword">Password:</label>
+                        <input type="password" id="loginPassword" name="password" required>
+                    </div>
+                    <!-- Dynamic message containers (hidden by default) -->
+                    <div id="loginErrorMessage" class="error-message" style="display: none;"></div>
+                    <div id="loginSuccessMessage" class="success-message" style="display: none;"></div>
+                    <!-- Form action buttons -->
+                    <div class="form-actions">
+                        <button type="button" id="loginCancelBtn" class="btn-cancel">Cancel</button>
+                        <button type="submit" id="loginSubmitBtn" class="btn-submit">Log In</button>
+                    </div>
+                </form>
+                <!-- Additional login options -->
+                <div class="form-footer">
+                    <p><a href="/Auth/ForgotPassword">Forgot your password?</a></p>
+                    <p>Don't have an account? <a href="#" id="switchToSignup">Sign up here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // LEGACY FUNCTION: No longer used but kept to prevent JS errors
         function toggleVentures() {
@@ -202,92 +241,80 @@
             }
         });
 
-        // SIGNUP MODAL FUNCTIONALITY: Handles modal display and form submission
+        // MODAL FUNCTIONALITY: Handles both signup and login modals
         document.addEventListener('DOMContentLoaded', function() {
-            const modal = document.getElementById('signupModal');
+            const signupModal = document.getElementById('signupModal');
+            const loginModal = document.getElementById('loginModal');
             const signupLink = document.getElementById('signupLink');
+            const loginLink = document.getElementById('loginLink');
 
-            // Only attach modal functionality if signup link exists (Guest role only)
-            // This prevents JS errors when viewing as Client/Admin
+            // SIGNUP MODAL FUNCTIONALITY
             if (signupLink) {
-                const closeBtn = document.querySelector('.close');
+                const signupCloseBtn = signupModal.querySelector('.close');
                 const cancelBtn = document.getElementById('cancelBtn');
-                const form = document.getElementById('signupForm');
+                const signupForm = document.getElementById('signupForm');
                 const errorMessage = document.getElementById('errorMessage');
                 const successMessage = document.getElementById('successMessage');
 
-                // MODAL DISPLAY: Open modal when signup link is clicked
+                // Open signup modal
                 signupLink.addEventListener('click', function(e) {
-                    e.preventDefault(); // Prevent default link behavior
-                    modal.style.display = 'block';
-                    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+                    e.preventDefault();
+                    signupModal.style.display = 'block';
+                    document.body.style.overflow = 'hidden';
                 });
 
-                // MODAL CLOSING: Function to hide modal and reset form
-                function closeModal() {
-                    modal.style.display = 'none';
-                    document.body.style.overflow = 'auto'; // Restore scrolling
-                    form.reset(); // Clear form fields
-                    hideMessages(); // Hide any error/success messages
+                // Close signup modal
+                function closeSignupModal() {
+                    signupModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                    signupForm.reset();
+                    hideSignupMessages();
                 }
 
-                // Attach close functionality to close button and cancel button
-                closeBtn.addEventListener('click', closeModal);
-                cancelBtn.addEventListener('click', closeModal);
+                signupCloseBtn.addEventListener('click', closeSignupModal);
+                cancelBtn.addEventListener('click', closeSignupModal);
 
-                // Close modal when clicking outside the modal content
-                window.addEventListener('click', function(e) {
-                    if (e.target === modal) {
-                        closeModal();
-                    }
-                });
-
-                // MESSAGE MANAGEMENT FUNCTIONS
-                function hideMessages() {
+                // Message management for signup
+                function hideSignupMessages() {
                     errorMessage.style.display = 'none';
                     successMessage.style.display = 'none';
                 }
 
-                function showError(message) {
-                    hideMessages();
+                function showSignupError(message) {
+                    hideSignupMessages();
                     errorMessage.textContent = message;
                     errorMessage.style.display = 'block';
                 }
 
-                function showSuccess(message) {
-                    hideMessages();
+                function showSignupSuccess(message) {
+                    hideSignupMessages();
                     successMessage.textContent = message;
                     successMessage.style.display = 'block';
                 }
 
-                // FORM SUBMISSION: Handle signup form submission
-                form.addEventListener('submit', async function(e) {
-                    e.preventDefault(); // Prevent default form submission
+                // Signup form submission
+                signupForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
 
-                    // Get and validate form data
                     const firstName = document.getElementById('firstName').value.trim();
                     const lastName = document.getElementById('lastName').value.trim();
                     const email = document.getElementById('email').value.trim();
 
-                    // CLIENT-SIDE VALIDATION: Check for empty fields
                     if (!firstName || !lastName || !email) {
-                        showError('Please fill in all fields.');
+                        showSignupError('Please fill in all fields.');
                         return;
                     }
 
-                    // UI FEEDBACK: Disable submit button during processing
                     const submitBtn = document.getElementById('submitBtn');
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Processing...';
 
                     try {
-                        // API CALL: Send signup data to server
                         const response = await fetch('/api/signup', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            // Send user data as JSON
                             body: JSON.stringify({
                                 firstName: firstName,
                                 lastName: lastName,
@@ -295,30 +322,141 @@
                             })
                         });
 
-                        // Parse server response
                         const result = await response.json();
 
-                        // HANDLE RESPONSE: Success or error from server
                         if (response.ok) {
-                            showSuccess('Account created successfully! You can now log in.');
-                            form.reset();
-                            // Auto-close modal after 2 seconds on success
-                            setTimeout(closeModal, 2000);
+                            showSignupSuccess('Account created successfully! Check your email to complete registration.');
+                            signupForm.reset();
+                            setTimeout(closeSignupModal, 3000);
                         } else {
-                            // Show server error message or generic error
-                            showError(result.message || 'An error occurred during signup.');
+                            showSignupError(result.message || 'An error occurred during signup.');
                         }
                     } catch (error) {
-                        // NETWORK ERROR: Handle connection/network issues
-                        showError('Network error. Please try again.');
+                        showSignupError('Network error. Please try again.');
                         console.error('Signup error:', error);
                     } finally {
-                        // CLEANUP: Re-enable submit button regardless of outcome
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Sign Up';
                     }
                 });
             }
+
+            // LOGIN MODAL FUNCTIONALITY
+            if (loginLink) {
+                const loginCloseBtn = loginModal.querySelector('.login-close');
+                const loginCancelBtn = document.getElementById('loginCancelBtn');
+                const loginForm = document.getElementById('loginForm');
+                const loginErrorMessage = document.getElementById('loginErrorMessage');
+                const loginSuccessMessage = document.getElementById('loginSuccessMessage');
+                const switchToSignup = document.getElementById('switchToSignup');
+
+                // Open login modal
+                loginLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    loginModal.style.display = 'block';
+                    document.body.style.overflow = 'hidden';
+                });
+
+                // Close login modal
+                function closeLoginModal() {
+                    loginModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                    loginForm.reset();
+                    hideLoginMessages();
+                }
+
+                loginCloseBtn.addEventListener('click', closeLoginModal);
+                loginCancelBtn.addEventListener('click', closeLoginModal);
+
+                // Switch between modals
+                switchToSignup.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    closeLoginModal();
+                    signupModal.style.display = 'block';
+                    document.body.style.overflow = 'hidden';
+                });
+
+                // Message management for login
+                function hideLoginMessages() {
+                    loginErrorMessage.style.display = 'none';
+                    loginSuccessMessage.style.display = 'none';
+                }
+
+                function showLoginError(message) {
+                    hideLoginMessages();
+                    loginErrorMessage.textContent = message;
+                    loginErrorMessage.style.display = 'block';
+                }
+
+                function showLoginSuccess(message) {
+                    hideLoginMessages();
+                    loginSuccessMessage.textContent = message;
+                    loginSuccessMessage.style.display = 'block';
+                }
+
+                // Login form submission
+                loginForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+
+                    const email = document.getElementById('loginEmail').value.trim();
+                    const password = document.getElementById('loginPassword').value;
+
+                    if (!email || !password) {
+                        showLoginError('Please enter both email and password.');
+                        return;
+                    }
+
+                    const submitBtn = document.getElementById('loginSubmitBtn');
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Logging in...';
+
+                    try {
+                        // Use your new SecurityService via an API endpoint
+                        const response = await fetch('/api/login', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                email: email,
+                                password: password
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            showLoginSuccess('Login successful! Redirecting...');
+                            loginForm.reset();
+
+                            // Reload page to show logged-in state
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            showLoginError(result.message || 'Invalid email or password.');
+                        }
+                    } catch (error) {
+                        showLoginError('Network error. Please try again.');
+                        console.error('Login error:', error);
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Log In';
+                    }
+                });
+            }
+
+            // Close modals when clicking outside
+            window.addEventListener('click', function(e) {
+                if (e.target === signupModal) {
+                    signupModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }
+                if (e.target === loginModal) {
+                    loginModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }
+            });
         });
     </script>
 </body>
