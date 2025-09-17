@@ -3,19 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AutumnRidgeUSA.Controllers
 {
-    public class LoginApiController : Controller
-    {
-        public IActionResult Index()
-        {
-            return View();
-        }
-    }
-}
-using Microsoft.AspNetCore.Mvc;
-using AutumnRidgeUSA.Services;
-
-namespace AutumnRidgeUSA.Controllers
-{
     [ApiController]
     [Route("api")]
     public class LoginApiController : ControllerBase
