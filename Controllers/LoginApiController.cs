@@ -100,7 +100,39 @@ namespace AutumnRidgeUSA.Controllers
                 return Ok(new { Error = ex.Message });
             }
         }
+        [HttpPost("debug-auth")]
+        public async Task<IActionResult> DebugAuth([FromBody] LoginRequest request)
+        {
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
 
+                if (user == null)
+                {
+                    return Ok(new { Found = false, Message = "User not found" });
+                }
+
+                // Test password verification step by step
+                var isPasswordCorrect = _securityService.VerifyPassword(request.Password, user.PasswordHash, user.Salt ?? "");
+
+                return Ok(new
+                {
+                    Found = true,
+                    Email = user.Email,
+                    IsConfirmed = user.IsConfirmed,
+                    HasSalt = !string.IsNullOrEmpty(user.Salt),
+                    HasPassword = !string.IsNullOrEmpty(user.PasswordHash),
+                    PasswordVerified = isPasswordCorrect,
+                    ProvidedPassword = request.Password,
+                    StoredHashLength = user.PasswordHash.Length,
+                    StoredSaltLength = user.Salt?.Length ?? 0
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { Error = ex.Message });
+            }
+        }
         public class LoginRequest
         {
             public string Email { get; set; } = string.Empty;
