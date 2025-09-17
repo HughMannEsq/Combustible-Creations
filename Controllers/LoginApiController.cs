@@ -1,5 +1,7 @@
-﻿using AutumnRidgeUSA.Services;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using AutumnRidgeUSA.Services;
+using AutumnRidgeUSA.Data;
 
 namespace AutumnRidgeUSA.Controllers
 {
@@ -9,11 +11,13 @@ namespace AutumnRidgeUSA.Controllers
     {
         private readonly ISecurityService _securityService;
         private readonly ILogger<LoginApiController> _logger;
+        private readonly AppDbContext _context;
 
-        public LoginApiController(ISecurityService securityService, ILogger<LoginApiController> logger)
+        public LoginApiController(ISecurityService securityService, ILogger<LoginApiController> logger, AppDbContext context)
         {
             _securityService = securityService;
             _logger = logger;
+            _context = context;
         }
 
         [HttpPost("login")]
@@ -68,11 +72,39 @@ namespace AutumnRidgeUSA.Controllers
                 return StatusCode(500, new { message = "An error occurred during login." });
             }
         }
-    }
 
-    public class LoginRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
+        [HttpGet("debug-users")]
+        public async Task<IActionResult> DebugUsers()
+        {
+            try
+            {
+                var users = await _context.Users.ToListAsync();
+                var userInfo = users.Select(u => new {
+                    u.Email,
+                    u.Role,
+                    u.IsConfirmed,
+                    HasSalt = !string.IsNullOrEmpty(u.Salt),
+                    HasPassword = !string.IsNullOrEmpty(u.PasswordHash),
+                    SaltLength = u.Salt?.Length ?? 0,
+                    HashLength = u.PasswordHash?.Length ?? 0
+                }).ToList();
+
+                return Ok(new
+                {
+                    TotalUsers = users.Count,
+                    Users = userInfo
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { Error = ex.Message });
+            }
+        }
+
+        public class LoginRequest
+        {
+            public string Email { get; set; } = string.Empty;
+            public string Password { get; set; } = string.Empty;
+        }
     }
 }

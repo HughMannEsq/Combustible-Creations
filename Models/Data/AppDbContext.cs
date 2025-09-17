@@ -26,6 +26,10 @@ namespace AutumnRidgeUSA.Data
                 entity.Property(e => e.Email).HasMaxLength(255);
                 entity.Property(e => e.PasswordHash).HasMaxLength(255);
                 entity.Property(e => e.ConfirmationToken).HasMaxLength(255);
+
+                // ADD THESE LINES FOR THE NEW SECURITY FIELDS:
+                entity.Property(e => e.Salt).HasMaxLength(255);
+                entity.Property(e => e.LastLoginIP).HasMaxLength(45);
             });
 
             // Configure TempSignup entity
