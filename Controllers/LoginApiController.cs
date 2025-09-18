@@ -58,7 +58,30 @@ namespace AutumnRidgeUSA.Controllers
                 return StatusCode(500, new { message = "An error occurred during login." });
             }
         }
+        [HttpGet("debug-db")]
+        public async Task<IActionResult> DebugDatabase()
+        {
+            try
+            {
+                var userCount = await _context.Users.CountAsync();
+                var hasAdmin = await _context.Users.AnyAsync(u => u.Email == "admin@test.com");
 
+                return Ok(new
+                {
+                    UserCount = userCount,
+                    HasAdmin = hasAdmin,
+                    DatabaseConnected = true
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new
+                {
+                    DatabaseConnected = false,
+                    Error = ex.Message
+                });
+            }
+        }
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
