@@ -36,14 +36,25 @@ namespace AutumnRidgeUSA.Controllers
 
                 if (user != null)
                 {
-                    // For Phase 2, we'll just use the role switcher cookie mechanism
-                    // In Phase 3, we'll add proper session management
+                    // Create secure session
+                    var sessionToken = await _securityService.CreateSessionAsync(user);
+
+                    // Set secure session cookie
+                    Response.Cookies.Append("SessionToken", sessionToken, new CookieOptions
+                    {
+                        HttpOnly = true,        // Prevents JavaScript access
+                        Secure = true,          // HTTPS only
+                        SameSite = SameSiteMode.Strict,
+                        Expires = DateTimeOffset.UtcNow.AddHours(2)
+                    });
+
+                    // Also set role cookie for backward compatibility with your home page
                     Response.Cookies.Append("ImpersonatedRole", user.Role, new CookieOptions
                     {
-                        Expires = DateTimeOffset.UtcNow.AddHours(8),
                         HttpOnly = false,
                         SameSite = SameSiteMode.Lax,
-                        Secure = false // Set to true in production with HTTPS
+                        Secure = true,
+                        Expires = DateTimeOffset.UtcNow.AddHours(2)
                     });
 
                     _logger.LogInformation("Login successful for: {Email}", request.Email);
@@ -56,7 +67,8 @@ namespace AutumnRidgeUSA.Controllers
                             email = user.Email,
                             firstName = user.FirstName,
                             lastName = user.LastName,
-                            role = user.Role
+                            role = user.Role,
+                            userId = user.UserId
                         }
                     });
                 }
@@ -73,66 +85,31 @@ namespace AutumnRidgeUSA.Controllers
             }
         }
 
-        [HttpGet("debug-users")]
-        public async Task<IActionResult> DebugUsers()
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
         {
             try
             {
-                var users = await _context.Users.ToListAsync();
-                var userInfo = users.Select(u => new {
-                    u.Email,
-                    u.Role,
-                    u.IsConfirmed,
-                    HasSalt = !string.IsNullOrEmpty(u.Salt),
-                    HasPassword = !string.IsNullOrEmpty(u.PasswordHash),
-                    SaltLength = u.Salt?.Length ?? 0,
-                    HashLength = u.PasswordHash?.Length ?? 0
-                }).ToList();
+                var sessionToken = Request.Cookies["SessionToken"];
 
-                return Ok(new
+                if (!string.IsNullOrEmpty(sessionToken))
                 {
-                    TotalUsers = users.Count,
-                    Users = userInfo
-                });
-            }
-            catch (Exception ex)
-            {
-                return Ok(new { Error = ex.Message });
-            }
-        }
-        [HttpPost("debug-auth")]
-        public async Task<IActionResult> DebugAuth([FromBody] LoginRequest request)
-        {
-            try
-            {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower());
-
-                if (user == null)
-                {
-                    return Ok(new { Found = false, Message = "User not found" });
+                    await _securityService.LogoutAsync(sessionToken);
                 }
 
-                // Test password verification step by step
-                var isPasswordCorrect = _securityService.VerifyPassword(request.Password, user.PasswordHash, user.Salt ?? "");
+                // Clear both cookies
+                Response.Cookies.Delete("SessionToken");
+                Response.Cookies.Delete("ImpersonatedRole");
 
-                return Ok(new
-                {
-                    Found = true,
-                    Email = user.Email,
-                    IsConfirmed = user.IsConfirmed,
-                    HasSalt = !string.IsNullOrEmpty(user.Salt),
-                    HasPassword = !string.IsNullOrEmpty(user.PasswordHash),
-                    PasswordVerified = isPasswordCorrect,
-                    ProvidedPassword = request.Password,
-                    StoredHashLength = user.PasswordHash.Length,
-                    StoredSaltLength = user.Salt?.Length ?? 0
-                });
+                return Ok(new { message = "Logged out successfully" });
             }
             catch (Exception ex)
             {
-                return Ok(new { Error = ex.Message });
+                _logger.LogError(ex, "Logout error");
+                return StatusCode(500, new { message = "An error occurred during logout." });
             }
         }
+
         public class LoginRequest
         {
             public string Email { get; set; } = string.Empty;

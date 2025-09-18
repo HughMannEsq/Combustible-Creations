@@ -47,12 +47,13 @@
                     <span style="color: #FFD700;">|</span>
                     <a href="/Account/Logout">Log Out</a>
                 }
+                <!-- In your auth links section, change the logout href -->
                 @* ADMIN VIEW: Show dashboard access and logout *@
                 else if (currentRole == "Admin")
                 {
-                    <a href="/Admin/Clients">Dashboard</a>
-                    <span style="color: #FFD700;">|</span>
-                    <a href="/Account/Logout">Log Out</a>
+                <a href="/Admin/Clients">Dashboard</a>
+                <span style="color: #FFD700;">|</span>
+                <a href="#" onclick="logout()">Log Out</a>  <!-- Changed this -->
                 }
             </div>
 
@@ -393,6 +394,23 @@
                     loginSuccessMessage.textContent = message;
                     loginSuccessMessage.style.display = 'block';
                 }
+
+                        // Add this function to your home page JavaScript
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    window.location.reload(); // Refresh to show logged-out state
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Fallback: just reload the page
+                window.location.reload();
+            }
+        }
 
                 // Login form submission
                 loginForm.addEventListener('submit', async function(e) {

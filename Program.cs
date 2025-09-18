@@ -33,6 +33,8 @@ builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // For MVC controllers
+// Add this with your other service registrations
+builder.Services.AddScoped<IUserImportService, UserImportService>();
 
 // Register Email Service
 builder.Services.Configure<EmailSettings>(

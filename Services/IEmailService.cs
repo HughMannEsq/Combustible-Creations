@@ -14,5 +14,6 @@ namespace AutumnRidgeUSA.Services
         Task SendWelcomeEmailAsync(string toEmail, string firstName);
 
         Task<bool> SendEmailAsync(string toEmail, string subject, string htmlBody);
+
     }
 }

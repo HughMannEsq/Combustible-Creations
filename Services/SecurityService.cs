@@ -12,6 +12,10 @@ namespace AutumnRidgeUSA.Services
         string HashPassword(string password, string salt);
         string GenerateSalt();
         bool VerifyPassword(string password, string hash, string salt);
+
+        Task<string> CreateSessionAsync(User user);
+        Task<User?> ValidateSessionAsync(string sessionToken);
+        Task LogoutAsync(string sessionToken);
     }
 
     public class SecurityService : ISecurityService
@@ -91,6 +95,63 @@ namespace AutumnRidgeUSA.Services
         {
             var computedHash = HashPassword(password, salt);
             return computedHash == hash;
+        }
+
+        // ADD these methods to your existing SecurityService class:
+
+
+
+        public async Task<string> CreateSessionAsync(User user)
+        {
+            var sessionToken = Guid.NewGuid().ToString("N");
+
+            user.CurrentSessionToken = sessionToken;
+            user.SessionExpiresAt = DateTime.UtcNow.AddHours(2);
+            user.LastLoginAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Session created for user: {Email}", user.Email);
+            return sessionToken;
+        }
+
+        public async Task<User?> ValidateSessionAsync(string sessionToken)
+        {
+            if (string.IsNullOrEmpty(sessionToken))
+                return null;
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.CurrentSessionToken == sessionToken);
+
+            if (user == null)
+                return null;
+
+            // Check if session expired
+            if (user.SessionExpiresAt == null || user.SessionExpiresAt <= DateTime.UtcNow)
+            {
+                // Session expired, clear it
+                user.CurrentSessionToken = null;
+                user.SessionExpiresAt = null;
+                await _context.SaveChangesAsync();
+                return null;
+            }
+
+            return user;
+        }
+
+        public async Task LogoutAsync(string sessionToken)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.CurrentSessionToken == sessionToken);
+
+            if (user != null)
+            {
+                user.CurrentSessionToken = null;
+                user.SessionExpiresAt = null;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("User logged out: {Email}", user.Email);
+            }
         }
     }
 }

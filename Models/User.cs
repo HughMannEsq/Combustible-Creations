@@ -99,5 +99,9 @@ namespace AutumnRidgeUSA.Models
                 return string.Join(", ", addressParts);
             }
         }
+        // Session management fields (should already be there)
+        [MaxLength(255)]
+        public string? CurrentSessionToken { get; set; }
+        public DateTime? SessionExpiresAt { get; set; }
     }
 }
