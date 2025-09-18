@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Services;
 using AutumnRidgeUSA.Data;
 
-
-
 namespace AutumnRidgeUSA.Controllers
 {
     [ApiController]
@@ -27,24 +25,39 @@ namespace AutumnRidgeUSA.Controllers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+                {
+                    return BadRequest(new { message = "Email and password are required." });
+                }
+
                 _logger.LogInformation("Login attempt for email: {Email}", request.Email);
 
                 var user = await _securityService.AuthenticateAsync(request.Email, request.Password);
 
                 if (user != null)
                 {
-                    // Simple role cookie (like before)
+                    // Phase 2 approach - just set role cookie
                     Response.Cookies.Append("ImpersonatedRole", user.Role, new CookieOptions
                     {
+                        Expires = DateTimeOffset.UtcNow.AddHours(8),
                         HttpOnly = false,
                         SameSite = SameSiteMode.Lax,
-                        Secure = false, // Simplified for testing
-                        Expires = DateTimeOffset.UtcNow.AddHours(8)
+                        Secure = false
                     });
 
                     _logger.LogInformation("Login successful for: {Email}", request.Email);
 
-                    return Ok(new { message = "Login successful" });
+                    return Ok(new
+                    {
+                        message = "Login successful",
+                        user = new
+                        {
+                            email = user.Email,
+                            firstName = user.FirstName,
+                            lastName = user.LastName,
+                            role = user.Role
+                        }
+                    });
                 }
                 else
                 {
@@ -56,54 +69,6 @@ namespace AutumnRidgeUSA.Controllers
             {
                 _logger.LogError(ex, "Login error for: {Email}", request.Email);
                 return StatusCode(500, new { message = "An error occurred during login." });
-            }
-        }
-        [HttpGet("debug-db")]
-        public async Task<IActionResult> DebugDatabase()
-        {
-            try
-            {
-                var userCount = await _context.Users.CountAsync();
-                var hasAdmin = await _context.Users.AnyAsync(u => u.Email == "admin@test.com");
-
-                return Ok(new
-                {
-                    UserCount = userCount,
-                    HasAdmin = hasAdmin,
-                    DatabaseConnected = true
-                });
-            }
-            catch (Exception ex)
-            {
-                return Ok(new
-                {
-                    DatabaseConnected = false,
-                    Error = ex.Message
-                });
-            }
-        }
-        [HttpPost("logout")]
-        public async Task<IActionResult> Logout()
-        {
-            try
-            {
-                var sessionToken = Request.Cookies["SessionToken"];
-
-                if (!string.IsNullOrEmpty(sessionToken))
-                {
-                    await _securityService.LogoutAsync(sessionToken);
-                }
-
-                // Clear both cookies
-                Response.Cookies.Delete("SessionToken");
-                Response.Cookies.Delete("ImpersonatedRole");
-
-                return Ok(new { message = "Logged out successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Logout error");
-                return StatusCode(500, new { message = "An error occurred during logout." });
             }
         }
 
