@@ -204,12 +204,31 @@
             </div>
         </div>
     </div>
-
     <script>
         // LEGACY FUNCTION: No longer used but kept to prevent JS errors
         function toggleVentures() {
             // This function was for the old sidebar "Our Ventures" dropdown
             // Kept empty to avoid errors if referenced elsewhere
+        }
+
+        // LOGOUT FUNCTION: Moved to global scope so onclick can find it
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    window.location.reload(); // Refresh to show logged-out state
+                } else {
+                    console.error('Logout failed');
+                    window.location.reload(); // Fallback
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Fallback: just reload the page
+                window.location.reload();
+            }
         }
 
         // ROLE SWITCHER FUNCTIONALITY: Handles dropdown role selection
@@ -394,23 +413,6 @@
                     loginSuccessMessage.textContent = message;
                     loginSuccessMessage.style.display = 'block';
                 }
-
-                        // Add this function to your home page JavaScript
-        async function logout() {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST'
-                });
-
-                if (response.ok) {
-                    window.location.reload(); // Refresh to show logged-out state
-                }
-            } catch (error) {
-                console.error('Logout error:', error);
-                // Fallback: just reload the page
-                window.location.reload();
-            }
-        }
 
                 // Login form submission
                 loginForm.addEventListener('submit', async function(e) {
