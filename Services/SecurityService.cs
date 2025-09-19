@@ -29,13 +29,19 @@ namespace AutumnRidgeUSA.Services
             _logger = logger;
         }
 
+        // Replace the AuthenticateAsync method in SecurityService.cs with this version
+        // This handles users without proper salts
+
         public async Task<User?> AuthenticateAsync(string email, string password)
         {
             try
             {
                 var normalizedEmail = email.ToLower().Trim();
+
+                // Get user with basic fields
                 var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+                    .Where(u => u.Email.ToLower() == normalizedEmail)
+                    .FirstOrDefaultAsync();
 
                 if (user == null)
                 {
@@ -50,15 +56,31 @@ namespace AutumnRidgeUSA.Services
                     return null;
                 }
 
-                // For now, just check if we have a salt - if not, this is an old password
-                if (string.IsNullOrEmpty(user.Salt))
+                // Handle different password storage scenarios
+
+                // Case 1: User has no salt or temp salt marker (legacy/imported users)
+                if (string.IsNullOrEmpty(user.Salt) || user.Salt == "TEMP_SALT_NEEDS_RESET")
                 {
-                    // This is an existing user without salt - we'll handle migration later
-                    _logger.LogInformation("User {Email} needs password migration", email);
-                    return null; // Force them to reset password for now
+                    // For users without salt, check if password matches hash directly
+                    // This handles imported users or users created before salt implementation
+                    if (user.PasswordHash == password)
+                    {
+                        _logger.LogWarning("Legacy authentication for user without salt: {Email}", email);
+
+                        // Optionally: Update to secure password here
+                        // var newSalt = GenerateSalt();
+                        // user.Salt = newSalt;
+                        // user.PasswordHash = HashPassword(password, newSalt);
+                        // await _context.SaveChangesAsync();
+
+                        return user;
+                    }
+
+                    _logger.LogWarning("Authentication failed - legacy password mismatch: {Email}", email);
+                    return null;
                 }
 
-                // Verify password with salt
+                // Case 2: User has proper salt (new secure users)
                 if (!VerifyPassword(password, user.PasswordHash, user.Salt))
                 {
                     _logger.LogWarning("Authentication failed - invalid password: {Email}", email);
