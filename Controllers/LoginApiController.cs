@@ -194,10 +194,116 @@ namespace AutumnRidgeUSA.Controllers
             }
         }
 
+        // ADMIN ENDPOINTS - Add authentication check in production
+        [HttpDelete("admin/delete-user")]
+        public async Task<IActionResult> DeleteUser([FromQuery] string email, [FromQuery] string adminKey)
+        {
+            // Simple security check - change this key!
+            if (adminKey != "admin-delete-key-2024")
+            {
+                return Unauthorized("Invalid admin key");
+            }
+
+            try
+            {
+                var deleted = await _securityService.DeleteUserAsync(email);
+
+                if (deleted)
+                {
+                    _logger.LogInformation("Admin deleted user: {Email}", email);
+                    return Ok(new { message = $"User {email} deleted successfully" });
+                }
+                else
+                {
+                    return NotFound(new { message = $"User {email} not found" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user: {Email}", email);
+                return StatusCode(500, new { message = "Error deleting user" });
+            }
+        }
+
+        [HttpPost("admin/reset-password")]
+        public async Task<IActionResult> ResetUserPassword([FromBody] ResetPasswordRequest request, [FromQuery] string adminKey)
+        {
+            // Simple security check - change this key!
+            if (adminKey != "admin-delete-key-2024")
+            {
+                return Unauthorized("Invalid admin key");
+            }
+
+            try
+            {
+                var reset = await _securityService.ResetUserPasswordAsync(request.Email, request.NewPassword);
+
+                if (reset)
+                {
+                    _logger.LogInformation("Admin reset password for: {Email}", request.Email);
+                    return Ok(new { message = $"Password reset for {request.Email}" });
+                }
+                else
+                {
+                    return NotFound(new { message = $"User {request.Email} not found" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password for: {Email}", request.Email);
+                return StatusCode(500, new { message = "Error resetting password" });
+            }
+        }
+
+        [HttpGet("admin/user-info")]
+        public async Task<IActionResult> GetUserInfo([FromQuery] string email, [FromQuery] string adminKey)
+        {
+            // Simple security check - change this key!
+            if (adminKey != "admin-delete-key-2024")
+            {
+                return Unauthorized("Invalid admin key");
+            }
+
+            try
+            {
+                var user = await _securityService.GetUserByEmailAsync(email);
+
+                if (user == null)
+                {
+                    return NotFound(new { message = $"User {email} not found" });
+                }
+
+                return Ok(new
+                {
+                    email = user.Email,
+                    firstName = user.FirstName,
+                    lastName = user.LastName,
+                    role = user.Role,
+                    isConfirmed = user.IsConfirmed,
+                    hasSalt = !string.IsNullOrEmpty(user.Salt),
+                    saltValue = user.Salt?.Substring(0, Math.Min(10, user.Salt?.Length ?? 0)) + "...",
+                    lastLogin = user.LastLoginAt,
+                    sessionActive = !string.IsNullOrEmpty(user.CurrentSessionToken),
+                    sessionExpires = user.SessionExpiresAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user info: {Email}", email);
+                return StatusCode(500, new { message = "Error getting user info" });
+            }
+        }
+
         public class LoginRequest
         {
             public string Email { get; set; } = string.Empty;
             public string Password { get; set; } = string.Empty;
+        }
+
+        public class ResetPasswordRequest
+        {
+            public string Email { get; set; } = string.Empty;
+            public string NewPassword { get; set; } = string.Empty;
         }
     }
 }

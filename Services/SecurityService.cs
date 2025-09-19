@@ -16,6 +16,11 @@ namespace AutumnRidgeUSA.Services
         Task<string> CreateSessionAsync(User user);
         Task<User?> ValidateSessionAsync(string sessionToken);
         Task LogoutAsync(string sessionToken);
+
+        // Account management
+        Task<bool> DeleteUserAsync(string email);
+        Task<User?> GetUserByEmailAsync(string email);
+        Task<bool> ResetUserPasswordAsync(string email, string newPassword);
     }
 
     public class SecurityService : ISecurityService
@@ -128,7 +133,7 @@ namespace AutumnRidgeUSA.Services
             var sessionToken = Guid.NewGuid().ToString("N");
 
             user.CurrentSessionToken = sessionToken;
-            user.SessionExpiresAt = DateTime.UtcNow.AddHours(2);
+            user.SessionExpiresAt = DateTime.UtcNow.AddHours(8); // Match cookie expiration
             user.LastLoginAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -173,6 +178,81 @@ namespace AutumnRidgeUSA.Services
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("User logged out: {Email}", user.Email);
+            }
+        }
+
+        // Account management methods
+        public async Task<bool> DeleteUserAsync(string email)
+        {
+            try
+            {
+                var normalizedEmail = email.ToLower().Trim();
+                var user = await _context.Users
+                    .Include(u => u.UserDivisions)
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("Cannot delete - user not found: {Email}", email);
+                    return false;
+                }
+
+                // Remove related UserDivisions first
+                _context.UserDivisions.RemoveRange(user.UserDivisions);
+
+                // Remove the user
+                _context.Users.Remove(user);
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("User deleted successfully: {Email}", email);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user: {Email}", email);
+                return false;
+            }
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            var normalizedEmail = email.ToLower().Trim();
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+        }
+
+        public async Task<bool> ResetUserPasswordAsync(string email, string newPassword)
+        {
+            try
+            {
+                var user = await GetUserByEmailAsync(email);
+                if (user == null)
+                {
+                    _logger.LogWarning("Cannot reset password - user not found: {Email}", email);
+                    return false;
+                }
+
+                // Generate new salt and hash
+                var newSalt = GenerateSalt();
+                var newHash = HashPassword(newPassword, newSalt);
+
+                user.Salt = newSalt;
+                user.PasswordHash = newHash;
+
+                // Clear any existing sessions
+                user.CurrentSessionToken = null;
+                user.SessionExpiresAt = null;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Password reset successfully for: {Email}", email);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password for: {Email}", email);
+                return false;
             }
         }
     }
