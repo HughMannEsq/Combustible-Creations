@@ -4,6 +4,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Data;
+using AutumnRidgeUSA.Services;
 
 namespace AutumnRidgeUSA.Controllers
 {
@@ -163,66 +164,219 @@ namespace AutumnRidgeUSA.Controllers
                 });
             }
         }
+        // Add to DatabaseMigrationController.cs
 
-        // Test user creation with new fields
-        [HttpPost("test-user-creation")]
-        public async Task<IActionResult> TestUserCreation([FromQuery] string key)
+        [HttpPost("reset-and-create-users")]
+        public async Task<IActionResult> ResetAndCreateUsers([FromQuery] string key)
         {
             if (key != "your-secret-migration-key-2024")
-            {
                 return Unauthorized("Invalid key");
-            }
 
             try
             {
-                // Check if test user already exists
-                var existingUser = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Email == "test@example.com");
+                // Step 1: Clear all existing users
+                var existingUsers = await _context.Users.ToListAsync();
+                _context.Users.RemoveRange(existingUsers);
+                await _context.SaveChangesAsync();
 
-                if (existingUser != null)
+                var results = new List<object>();
+
+                // Step 2: Create fresh users with proper security
+                var securityService = HttpContext.RequestServices.GetRequiredService<ISecurityService>();
+
+                // Create Admin user
+                var adminSalt = securityService.GenerateSalt();
+                var adminHash = securityService.HashPassword("Admin123!", adminSalt);
+
+                var adminUser = new Models.User
                 {
-                    return Ok(new
-                    {
-                        message = "Test user already exists",
-                        userId = existingUser.UserId,
-                        hasSessionToken = !string.IsNullOrEmpty(existingUser.CurrentSessionToken)
-                    });
-                }
+                    Email = "admin@autumnridge.com",
+                    FirstName = "Admin",
+                    LastName = "User",
+                    PasswordHash = adminHash,
+                    Salt = adminSalt,
+                    Role = "Admin",
+                    IsConfirmed = true,
+                    UserId = "ADM-001",
+                    CreatedAt = DateTime.UtcNow,
+                    ConfirmedAt = DateTime.UtcNow
+                };
 
-                // Create a test user to verify all fields work
+                _context.Users.Add(adminUser);
+                results.Add(new { email = "admin@autumnridge.com", password = "Admin123!", role = "Admin" });
+
+                // Create Client user
+                var clientSalt = securityService.GenerateSalt();
+                var clientHash = securityService.HashPassword("Client123!", clientSalt);
+
+                var clientUser = new Models.User
+                {
+                    Email = "client@example.com",
+                    FirstName = "John",
+                    LastName = "Client",
+                    PasswordHash = clientHash,
+                    Salt = clientSalt,
+                    Role = "Client",
+                    IsConfirmed = true,
+                    UserId = "CLT-001",
+                    CreatedAt = DateTime.UtcNow,
+                    ConfirmedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(clientUser);
+                results.Add(new { email = "client@example.com", password = "Client123!", role = "Client" });
+
+                // Create Test user (another admin for testing)
+                var testSalt = securityService.GenerateSalt();
+                var testHash = securityService.HashPassword("Test123!", testSalt);
+
                 var testUser = new Models.User
                 {
                     Email = "test@example.com",
                     FirstName = "Test",
-                    LastName = "User",
-                    PasswordHash = "test_hash",
-                    Salt = "test_salt",
-                    Role = "Client",
+                    LastName = "Admin",
+                    PasswordHash = testHash,
+                    Salt = testSalt,
+                    Role = "Admin",
                     IsConfirmed = true,
-                    UserId = "TEST-001",
-                    CreatedAt = DateTime.UtcNow
+                    UserId = "TST-001",
+                    CreatedAt = DateTime.UtcNow,
+                    ConfirmedAt = DateTime.UtcNow
                 };
 
                 _context.Users.Add(testUser);
+                results.Add(new { email = "test@example.com", password = "Test123!", role = "Admin" });
+
                 await _context.SaveChangesAsync();
 
                 return Ok(new
                 {
                     success = true,
-                    message = "Test user created successfully",
-                    userId = testUser.UserId
+                    message = "Database reset and users created successfully",
+                    users = results,
+                    note = "All users have properly salted and hashed passwords"
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "Could not create test user",
-                    error = ex.Message
-                });
+                return StatusCode(500, new { error = ex.Message });
             }
         }
+
+        [HttpGet("list-all-users")]
+        public async Task<IActionResult> ListAllUsers([FromQuery] string key)
+        {
+            if (key != "your-secret-migration-key-2024")
+                return Unauthorized("Invalid key");
+
+            try
+            {
+                var users = await _context.Users
+                    .Select(u => new
+                    {
+                        u.Email,
+                        u.Role,
+                        u.FirstName,
+                        u.LastName,
+                        u.UserId,
+                        u.IsConfirmed,
+                        HasValidSalt = !string.IsNullOrEmpty(u.Salt) && u.Salt != "TEMP_SALT_NEEDS_RESET"
+                    })
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    totalUsers = users.Count,
+                    users = users
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        // Add to DatabaseMigrationController.cs
+
+        [HttpGet("create-initial-users")]  // Using GET for easy browser access
+        public async Task<IActionResult> CreateInitialUsers([FromQuery] string key)
+        {
+            if (key != "your-secret-migration-key-2024")
+                return Unauthorized("Invalid key");
+
+            try
+            {
+                // Check if users already exist
+                var existingCount = await _context.Users.CountAsync();
+                if (existingCount > 0)
+                {
+                    return BadRequest(new { message = $"Database already has {existingCount} users. Use reset endpoint instead." });
+                }
+
+                var results = new List<object>();
+                var securityService = HttpContext.RequestServices.GetRequiredService<ISecurityService>();
+
+                // Create Admin user
+                var adminSalt = securityService.GenerateSalt();
+                var adminHash = securityService.HashPassword("Admin123!", adminSalt);
+
+                var adminUser = new Models.User
+                {
+                    Email = "admin@autumnridge.com",
+                    FirstName = "Admin",
+                    LastName = "User",
+                    PasswordHash = adminHash,
+                    Salt = adminSalt,
+                    Role = "Admin",
+                    IsConfirmed = true,
+                    UserId = "ADM-001",
+                    CreatedAt = DateTime.UtcNow,
+                    ConfirmedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(adminUser);
+                results.Add(new { email = "admin@autumnridge.com", password = "Admin123!", role = "Admin" });
+
+                // Create Client user for testing
+                var clientSalt = securityService.GenerateSalt();
+                var clientHash = securityService.HashPassword("Client123!", clientSalt);
+
+                var clientUser = new Models.User
+                {
+                    Email = "client@example.com",
+                    FirstName = "John",
+                    LastName = "Client",
+                    PasswordHash = clientHash,
+                    Salt = clientSalt,
+                    Role = "Client",
+                    IsConfirmed = true,
+                    UserId = "CLT-001",
+                    CreatedAt = DateTime.UtcNow,
+                    ConfirmedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(clientUser);
+                results.Add(new { email = "client@example.com", password = "Client123!", role = "Client" });
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Initial users created successfully!",
+                    users = results,
+                    instructions = "You can now login with any of these credentials"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating initial users");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+        // Test user creation with new fields
+        [HttpPost("test-user-creation")]
+        
 
         private async Task<bool> CheckColumnsExist()
         {
