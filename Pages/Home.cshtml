@@ -1,9 +1,7 @@
 ﻿@page
 @model AutumnRidgeUSA.Pages.HomeModel
 @{
-    // Set the page title that appears in browser tab
     ViewData["Title"] = "Home - Autumn Ridge LLC";
-    // Disable the shared _Layout.cshtml to prevent duplicate headers/navigation
     Layout = null;
 }
 
@@ -13,60 +11,52 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"]</title>
-    <!-- Link to our custom CSS file for home page styling -->
     <link rel="stylesheet" href="~/css/home.css" />
 </head>
 <body>
-    <!-- HEADER SECTION: Contains company branding and navigation -->
+    <!-- HEADER SECTION -->
     <div class="header-container">
-        <!-- LEFT THIRD: Company branding with blue background -->
+        <!-- Company branding -->
         <div class="company-branding">
             <h1 class="company-name">Autumn Ridge LLC</h1>
         </div>
 
-        <!-- RIGHT TWO-THIRDS: Authentication links and navigation menu -->
+        <!-- Header right section with auth and nav -->
         <div class="header-right">
-            <!-- DYNAMIC AUTH LINKS: Change based on user's current role -->
+            <!-- AUTH LINKS - FIXED VERSION -->
             <div class="auth-links">
                 @{
-                    // Read the role cookie set by AuthController (defaults to Guest if no cookie)
                     string currentRole = Request.Cookies["ImpersonatedRole"] ?? "Guest";
                 }
 
-                @* GUEST VIEW: Show signup and login options *@
                 @if (currentRole == "Guest")
                 {
                     <a href="#" id="signupLink">Sign Up</a>
                     <span style="color: #FFD700;">|</span>
                     <a href="#" id="loginLink">Log In</a>
                 }
-                @* CLIENT VIEW: Show account management and logout *@
                 else if (currentRole == "Client")
                 {
                     <a href="/Account/MyAccounts">My Accounts</a>
                     <span style="color: #FFD700;">|</span>
-                    <a href="/Account/Logout">Log Out</a>
+                    <a href="#" onclick="logout(); return false;">Log Out</a>
                 }
-                <!-- In your auth links section, change the logout href -->
-                @* ADMIN VIEW: Show dashboard access and logout *@
                 else if (currentRole == "Admin")
                 {
-                <a href="/Admin/Clients">Dashboard</a>
-                <span style="color: #FFD700;">|</span>
-                <a href="#" onclick="logout()">Log Out</a>  <!-- Changed this -->
+                    <a href="/Admin/Clients">Dashboard</a>
+                    <span style="color: #FFD700;">|</span>
+                    <a href="#" onclick="logout(); return false;">Log Out</a>
                 }
             </div>
 
-            <!-- MAIN NAVIGATION: Site-wide navigation menu and search -->
+            <!-- Navigation menu -->
             <nav class="navigation">
                 <div class="nav-content">
-                    <!-- Navigation menu items -->
                     <ul class="nav-menu">
                         <li><a href="/Mission">Our Mission</a></li>
                         <li><a href="/Contact">Contact Us</a></li>
                         <li><a href="/About">About Us</a></li>
                     </ul>
-                    <!-- Search functionality -->
                     <div class="search-container">
                         <form method="get" action="/search" style="display: inline;">
                             <input type="text" name="q" class="search-input" placeholder="Search" />
@@ -77,10 +67,10 @@
         </div>
     </div>
 
-    <!-- MAIN CONTENT SECTION -->
+    <!-- MAIN CONTENT -->
     <div class="main-container">
         <main class="content-area">
-            <!-- ROLE SWITCHER: Dropdown for testing different user roles (development tool) -->
+            <!-- Role dropdown for development testing -->
             <div class="role-dropdown">
                 <select id="roleSelect">
                     <option value="">Select Role</option>
@@ -90,9 +80,8 @@
                 </select>
             </div>
 
-            <!-- CONTENT GRID: Division links to subdomains -->
+            <!-- Content grid with division links -->
             <div class="content-grid">
-                <!-- CONTRACTING DIVISION -->
                 <a href="/Subdomains/Contracting" class="content-box content-link">
                     <div class="placeholder-icon">🏗️</div>
                     <h3>Contracting</h3>
@@ -100,7 +89,6 @@
                     <span class="link-indicator">Learn More →</span>
                 </a>
 
-                <!-- REAL ESTATE DIVISION -->
                 <a href="/Subdomains/RealEstate" class="content-box content-link">
                     <div class="placeholder-icon">🏠</div>
                     <h3>Real Estate</h3>
@@ -108,7 +96,6 @@
                     <span class="link-indicator">Learn More →</span>
                 </a>
 
-                <!-- RESIDENTIAL DIVISION -->
                 <a href="/Subdomains/Residential" class="content-box content-link">
                     <div class="placeholder-icon">🏡</div>
                     <h3>Residential</h3>
@@ -116,7 +103,6 @@
                     <span class="link-indicator">Learn More →</span>
                 </a>
 
-                <!-- STORAGE DIVISION -->
                 <a href="/Subdomains/Storage" class="content-box content-link">
                     <div class="placeholder-icon">📦</div>
                     <h3>Storage</h3>
@@ -127,36 +113,29 @@
         </main>
     </div>
 
-    <!-- SIGNUP MODAL: Only visible/functional when user is in Guest role -->
+    <!-- SIGNUP MODAL -->
     <div id="signupModal" class="modal">
         <div class="modal-content">
-            <!-- Modal header with title and close button -->
             <div class="modal-header">
                 <h2>Sign Up</h2>
                 <span class="close">&times;</span>
             </div>
-            <!-- Modal form content -->
             <div class="modal-body">
                 <form id="signupForm">
-                    <!-- First name input field -->
                     <div class="form-group">
                         <label for="firstName">First Name:</label>
                         <input type="text" id="firstName" name="firstName" required>
                     </div>
-                    <!-- Last name input field -->
                     <div class="form-group">
                         <label for="lastName">Last Name:</label>
                         <input type="text" id="lastName" name="lastName" required>
                     </div>
-                    <!-- Email input field -->
                     <div class="form-group">
                         <label for="email">Email Address:</label>
                         <input type="email" id="email" name="email" required>
                     </div>
-                    <!-- Dynamic message containers (hidden by default) -->
                     <div id="errorMessage" class="error-message" style="display: none;"></div>
                     <div id="successMessage" class="success-message" style="display: none;"></div>
-                    <!-- Form action buttons -->
                     <div class="form-actions">
                         <button type="button" id="cancelBtn" class="btn-cancel">Cancel</button>
                         <button type="submit" id="submitBtn" class="btn-submit">Sign Up</button>
@@ -166,37 +145,30 @@
         </div>
     </div>
 
-    <!-- LOGIN MODAL: Only visible/functional when user is in Guest role -->
+    <!-- LOGIN MODAL -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
-            <!-- Modal header with title and close button -->
             <div class="modal-header">
                 <h2>Log In</h2>
                 <span class="close login-close">&times;</span>
             </div>
-            <!-- Modal form content -->
             <div class="modal-body">
                 <form id="loginForm">
-                    <!-- Email input field -->
                     <div class="form-group">
                         <label for="loginEmail">Email Address:</label>
                         <input type="email" id="loginEmail" name="email" required>
                     </div>
-                    <!-- Password input field -->
                     <div class="form-group">
                         <label for="loginPassword">Password:</label>
                         <input type="password" id="loginPassword" name="password" required>
                     </div>
-                    <!-- Dynamic message containers (hidden by default) -->
                     <div id="loginErrorMessage" class="error-message" style="display: none;"></div>
                     <div id="loginSuccessMessage" class="success-message" style="display: none;"></div>
-                    <!-- Form action buttons -->
                     <div class="form-actions">
                         <button type="button" id="loginCancelBtn" class="btn-cancel">Cancel</button>
                         <button type="submit" id="loginSubmitBtn" class="btn-submit">Log In</button>
                     </div>
                 </form>
-                <!-- Additional login options -->
                 <div class="form-footer">
                     <p><a href="/Auth/ForgotPassword">Forgot your password?</a></p>
                     <p>Don't have an account? <a href="#" id="switchToSignup">Sign up here</a></p>
@@ -204,14 +176,9 @@
             </div>
         </div>
     </div>
-    <script>
-        // LEGACY FUNCTION: No longer used but kept to prevent JS errors
-        function toggleVentures() {
-            // This function was for the old sidebar "Our Ventures" dropdown
-            // Kept empty to avoid errors if referenced elsewhere
-        }
 
-        // LOGOUT FUNCTION: Moved to global scope so onclick can find it
+    <script>
+        // LOGOUT FUNCTION
         async function logout() {
             try {
                 const response = await fetch('/api/logout', {
@@ -219,56 +186,45 @@
                 });
 
                 if (response.ok) {
-                    window.location.reload(); // Refresh to show logged-out state
+                    window.location.reload();
                 } else {
                     console.error('Logout failed');
-                    window.location.reload(); // Fallback
+                    window.location.reload();
                 }
             } catch (error) {
                 console.error('Logout error:', error);
-                // Fallback: just reload the page
                 window.location.reload();
             }
         }
 
-        // ROLE SWITCHER FUNCTIONALITY: Handles dropdown role selection
+        // ROLE SWITCHER (Development only)
         document.getElementById('roleSelect').addEventListener('change', function() {
             const selectedRole = this.value;
-            console.log('Role selected:', selectedRole);
 
-            // If a role is selected, call the server to switch roles
             if (selectedRole) {
-                // Make POST request to AuthController to set role cookie
                 fetch('/Auth/SwitchRole', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    // Send role as form data
                     body: `role=${encodeURIComponent(selectedRole)}`
                 })
                 .then(response => {
                     if (response.ok) {
-                        // Reload page to show new role-specific UI
                         window.location.reload();
-                    } else {
-                        console.error('Failed to switch role');
                     }
-                })
-                .catch(error => {
-                    console.error('Error switching role:', error);
                 });
             }
         });
 
-        // MODAL FUNCTIONALITY: Handles both signup and login modals
+        // MODAL FUNCTIONALITY
         document.addEventListener('DOMContentLoaded', function() {
             const signupModal = document.getElementById('signupModal');
             const loginModal = document.getElementById('loginModal');
             const signupLink = document.getElementById('signupLink');
             const loginLink = document.getElementById('loginLink');
 
-            // SIGNUP MODAL FUNCTIONALITY
+            // SIGNUP MODAL
             if (signupLink) {
                 const signupCloseBtn = signupModal.querySelector('.close');
                 const cancelBtn = document.getElementById('cancelBtn');
@@ -276,14 +232,12 @@
                 const errorMessage = document.getElementById('errorMessage');
                 const successMessage = document.getElementById('successMessage');
 
-                // Open signup modal
                 signupLink.addEventListener('click', function(e) {
                     e.preventDefault();
                     signupModal.style.display = 'block';
                     document.body.style.overflow = 'hidden';
                 });
 
-                // Close signup modal
                 function closeSignupModal() {
                     signupModal.style.display = 'none';
                     document.body.style.overflow = 'auto';
@@ -294,7 +248,6 @@
                 signupCloseBtn.addEventListener('click', closeSignupModal);
                 cancelBtn.addEventListener('click', closeSignupModal);
 
-                // Message management for signup
                 function hideSignupMessages() {
                     errorMessage.style.display = 'none';
                     successMessage.style.display = 'none';
@@ -312,7 +265,6 @@
                     successMessage.style.display = 'block';
                 }
 
-                // Signup form submission
                 signupForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
 
@@ -361,7 +313,7 @@
                 });
             }
 
-            // LOGIN MODAL FUNCTIONALITY
+            // LOGIN MODAL
             if (loginLink) {
                 const loginCloseBtn = loginModal.querySelector('.login-close');
                 const loginCancelBtn = document.getElementById('loginCancelBtn');
@@ -370,14 +322,12 @@
                 const loginSuccessMessage = document.getElementById('loginSuccessMessage');
                 const switchToSignup = document.getElementById('switchToSignup');
 
-                // Open login modal
                 loginLink.addEventListener('click', function(e) {
                     e.preventDefault();
                     loginModal.style.display = 'block';
                     document.body.style.overflow = 'hidden';
                 });
 
-                // Close login modal
                 function closeLoginModal() {
                     loginModal.style.display = 'none';
                     document.body.style.overflow = 'auto';
@@ -388,7 +338,6 @@
                 loginCloseBtn.addEventListener('click', closeLoginModal);
                 loginCancelBtn.addEventListener('click', closeLoginModal);
 
-                // Switch between modals
                 switchToSignup.addEventListener('click', function(e) {
                     e.preventDefault();
                     closeLoginModal();
@@ -396,7 +345,6 @@
                     document.body.style.overflow = 'hidden';
                 });
 
-                // Message management for login
                 function hideLoginMessages() {
                     loginErrorMessage.style.display = 'none';
                     loginSuccessMessage.style.display = 'none';
@@ -414,7 +362,6 @@
                     loginSuccessMessage.style.display = 'block';
                 }
 
-                // Login form submission
                 loginForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
 
@@ -431,7 +378,6 @@
                     submitBtn.textContent = 'Logging in...';
 
                     try {
-                        // Use your new SecurityService via an API endpoint
                         const response = await fetch('/api/login', {
                             method: 'POST',
                             headers: {
@@ -449,7 +395,7 @@
                             showLoginSuccess('Login successful! Redirecting...');
                             loginForm.reset();
 
-                            // Reload page to show logged-in state
+                            // Force page reload to update header
                             setTimeout(() => {
                                 window.location.reload();
                             }, 1500);
