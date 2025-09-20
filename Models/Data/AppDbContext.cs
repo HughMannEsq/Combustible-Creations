@@ -11,7 +11,6 @@ namespace AutumnRidgeUSA.Data
         }
 
         public DbSet<User> Users { get; set; } = null!;
-        // REMOVED: DbSet<Client> - Client is not a database entity
         public DbSet<StorageContract> StorageContracts { get; set; } = null!;
         public DbSet<TempSignup> TempSignups { get; set; } = null!;
         public DbSet<Division> Divisions { get; set; } = null!;
@@ -19,7 +18,7 @@ namespace AutumnRidgeUSA.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Configure User entity
+            // Configure User entity - COMPLETE security field definitions
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasIndex(e => e.Email).IsUnique();
@@ -27,9 +26,16 @@ namespace AutumnRidgeUSA.Data
                 entity.Property(e => e.PasswordHash).HasMaxLength(255);
                 entity.Property(e => e.ConfirmationToken).HasMaxLength(255);
 
-                // ADD THESE LINES FOR THE NEW SECURITY FIELDS:
+                // ALL SECURITY FIELDS - properly defined to match your migration
                 entity.Property(e => e.Salt).HasMaxLength(255);
+                entity.Property(e => e.CurrentSessionToken).HasMaxLength(255);
+                entity.Property(e => e.SessionExpiresAt);
+                entity.Property(e => e.LastLoginAt);
                 entity.Property(e => e.LastLoginIP).HasMaxLength(45);
+
+                // Add indexes for performance on session lookups
+                entity.HasIndex(e => e.CurrentSessionToken);
+                entity.HasIndex(e => e.SessionExpiresAt);
             });
 
             // Configure TempSignup entity
@@ -49,7 +55,6 @@ namespace AutumnRidgeUSA.Data
             modelBuilder.Entity<StorageContract>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                // REMOVED: entity.HasIndex(e => e.UserId).IsUnique(); - Allow multiple contracts per user
 
                 // Change to one-to-many relationship (one user can have many storage contracts)
                 entity.HasOne(sc => sc.User)
@@ -83,7 +88,34 @@ namespace AutumnRidgeUSA.Data
                 new Division { Id = 3, Name = "Real Estate", Description = "Property management and sales", IsActive = true }
             );
 
+            // Add schema version tracking to prevent future issues
+            modelBuilder.Entity<SchemaVersion>(entity =>
+            {
+                entity.HasKey(e => e.Version);
+                entity.Property(e => e.Version).HasMaxLength(50);
+                entity.Property(e => e.AppliedAt);
+                entity.Property(e => e.Description).HasMaxLength(500);
+            });
+
+            // Seed current schema version
+            modelBuilder.Entity<SchemaVersion>().HasData(
+                new SchemaVersion
+                {
+                    Version = "1.2-security",
+                    AppliedAt = DateTime.UtcNow,
+                    Description = "Added security columns: Salt, CurrentSessionToken, SessionExpiresAt, LastLoginAt, LastLoginIP"
+                }
+            );
+
             base.OnModelCreating(modelBuilder);
         }
+    }
+
+    // Add this schema version tracking entity
+    public class SchemaVersion
+    {
+        public string Version { get; set; } = string.Empty;
+        public DateTime AppliedAt { get; set; }
+        public string? Description { get; set; }
     }
 }

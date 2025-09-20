@@ -281,7 +281,7 @@ namespace AutumnRidgeUSA.Controllers
                     role = user.Role,
                     isConfirmed = user.IsConfirmed,
                     hasSalt = !string.IsNullOrEmpty(user.Salt),
-                    saltValue = user.Salt?.Substring(0, Math.Min(10, user.Salt?.Length ?? 0)) + "...",
+                    saltValue = string.IsNullOrEmpty(user.Salt)   ? "(no salt)"  : user.Salt.Substring(0, Math.Min(10, user.Salt.Length)) + "...",
                     lastLogin = user.LastLoginAt,
                     sessionActive = !string.IsNullOrEmpty(user.CurrentSessionToken),
                     sessionExpires = user.SessionExpiresAt
