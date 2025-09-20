@@ -75,8 +75,8 @@
                                 <label class="division-checkbox">
                                     <input type="checkbox"
                                            name="division-@division.Id"
-                                           value="@division.Id"
-                                    @(Model.DivisionFilter.SelectedDivisionIds.Contains(division.Id) ? "checked" : "")
+                                           value="@division.Id"/>
+                                    <input type="checkbox" name="division-@division.Id" value="@division.Id.ToString()"
                                            onchange="updateDivisionFilter()" />
                                     @division.Name
                                 </label>
@@ -107,7 +107,7 @@
             {
                 <input type="checkbox" name="selectedDivisions" value="@division.Id"
                        id="hidden-@division.Id"
-                @(Model.DivisionFilter.SelectedDivisionIds.Contains(division.Id) ? "checked" : "") />
+                @(Model.DivisionFilter.SelectedDivisionIds.Contains(division.Id.ToString()) ? "checked" : "") />
             }
         </form>
 
