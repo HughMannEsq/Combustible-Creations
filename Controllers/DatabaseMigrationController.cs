@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Data;
 using AutumnRidgeUSA.Services;
 using System.Text;
+using DocumentFormat.OpenXml.Math;
+using DocumentFormat.OpenXml.Spreadsheet;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace AutumnRidgeUSA.Controllers
 {
@@ -165,7 +168,6 @@ namespace AutumnRidgeUSA.Controllers
                 });
             }
         }
-        // Add to DatabaseMigrationController.cs
 
         [HttpPost("reset-and-create-users")]
         public async Task<IActionResult> ResetAndCreateUsers([FromQuery] string key)
@@ -181,8 +183,6 @@ namespace AutumnRidgeUSA.Controllers
                 await _context.SaveChangesAsync();
 
                 var results = new List<object>();
-
-                // Step 2: Create fresh users with proper security
                 var securityService = HttpContext.RequestServices.GetRequiredService<ISecurityService>();
 
                 // Create Admin user
@@ -206,48 +206,6 @@ namespace AutumnRidgeUSA.Controllers
                 _context.Users.Add(adminUser);
                 results.Add(new { email = "admin@autumnridge.com", password = "Admin123!", role = "Admin" });
 
-                // Create Client user
-                var clientSalt = securityService.GenerateSalt();
-                var clientHash = securityService.HashPassword("Client123!", clientSalt);
-
-                var clientUser = new Models.User
-                {
-                    Email = "client@example.com",
-                    FirstName = "John",
-                    LastName = "Client",
-                    PasswordHash = clientHash,
-                    Salt = clientSalt,
-                    Role = "Client",
-                    IsConfirmed = true,
-                    UserId = "CLT-001",
-                    CreatedAt = DateTime.UtcNow,
-                    ConfirmedAt = DateTime.UtcNow
-                };
-
-                _context.Users.Add(clientUser);
-                results.Add(new { email = "client@example.com", password = "Client123!", role = "Client" });
-
-                // Create Test user (another admin for testing)
-                var testSalt = securityService.GenerateSalt();
-                var testHash = securityService.HashPassword("Test123!", testSalt);
-
-                var testUser = new Models.User
-                {
-                    Email = "test@example.com",
-                    FirstName = "Test",
-                    LastName = "Admin",
-                    PasswordHash = testHash,
-                    Salt = testSalt,
-                    Role = "Admin",
-                    IsConfirmed = true,
-                    UserId = "TST-001",
-                    CreatedAt = DateTime.UtcNow,
-                    ConfirmedAt = DateTime.UtcNow
-                };
-
-                _context.Users.Add(testUser);
-                results.Add(new { email = "test@example.com", password = "Test123!", role = "Admin" });
-
                 await _context.SaveChangesAsync();
 
                 return Ok(new
@@ -263,7 +221,6 @@ namespace AutumnRidgeUSA.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
-
         [HttpGet("list-all-users")]
         public async Task<IActionResult> ListAllUsers([FromQuery] string key)
         {
@@ -803,7 +760,7 @@ namespace AutumnRidgeUSA.Controllers
         }
         // Test user creation with new fields
         [HttpPost("test-user-creation")]
-                private async Task<bool> CheckColumnsExist()
+        private async Task<bool> CheckColumnsExist()
         {
             try
             {
@@ -827,6 +784,18 @@ namespace AutumnRidgeUSA.Controllers
                 // If the query fails, columns probably don't exist
                 return false;
             }
+        }
+        private string? ValidatePhoneType(string? phoneType)
+        {
+            if (string.IsNullOrEmpty(phoneType)) return null;
+
+            return phoneType.ToLower() switch
+            {
+                "cell" or "mobile" or "c" => "Cell",
+                "home" or "h" => "Home",
+                "work" or "office" or "w" => "Work",
+                _ => null
+            };
         }
     }
 }

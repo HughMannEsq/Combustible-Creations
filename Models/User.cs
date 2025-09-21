@@ -5,22 +5,11 @@ namespace AutumnRidgeUSA.Models
 {
     public class User
     {
-
-        // For secure password hashing
-        [MaxLength(255)]
-        public string? Salt { get; set; }
-
-        // For tracking login activity  
-        public DateTime? LastLoginAt { get; set; }
-
-        [MaxLength(45)]  // IPv6 max length
-        public string? LastLoginIP { get; set; }
         [Key]
         public int Id { get; set; }
 
-        // ADD: This is what your admin dashboard needs for display
         [MaxLength(10)]
-        public string? UserId { get; set; }  // Format: "####-ABC" - gets set during registration completion
+        public string? UserId { get; set; }
 
         [MaxLength(50)]
         public string? FirstName { get; set; }
@@ -32,21 +21,45 @@ namespace AutumnRidgeUSA.Models
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
-        public ICollection<UserDivision> UserDivisions { get; set; } = new List<UserDivision>();
-
+        // Authentication fields (needed for ALL users)
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
-        // Keep your existing confirmation system
+        [MaxLength(255)]
+        public string? Salt { get; set; }
+
+        [MaxLength(20)]
+        public string Role { get; set; } = "Client";
+
+        // Session management (needed for ALL users)
+        [MaxLength(255)]
+        public string? CurrentSessionToken { get; set; }
+        public DateTime? SessionExpiresAt { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+
+        [MaxLength(45)]
+        public string? LastLoginIP { get; set; }
+
+        // Core user info
         public string? ConfirmationToken { get; set; }
         public bool IsConfirmed { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? ConfirmedAt { get; set; }
 
-        // Address fields for complete registration
+        // Phone fields
         [MaxLength(15)]
         public string? Phone { get; set; }
 
+        [MaxLength(10)]
+        public string? PhoneType { get; set; }
+
+        [MaxLength(15)]
+        public string? Phone2 { get; set; }
+
+        [MaxLength(10)]
+        public string? Phone2Type { get; set; }
+
+        // Address fields
         [MaxLength(200)]
         public string? Address { get; set; }
 
@@ -59,16 +72,50 @@ namespace AutumnRidgeUSA.Models
         [MaxLength(10)]
         public string? ZipCode { get; set; }
 
-        [MaxLength(20)]
-        public string Role { get; set; } = "Client";
+        // Navigation properties
+        public ICollection<UserDivision> UserDivisions { get; set; } = new List<UserDivision>();
 
-        // Keep your alias for backward compatibility
+        // Computed properties
         [NotMapped]
         public int UserID => Id;
 
-        // Computed properties for display (optional)
         [NotMapped]
         public string FullName => $"{FirstName} {LastName}".Trim();
+
+        [NotMapped]
+        public string PhoneDisplay
+        {
+            get
+            {
+                var phones = new List<string>();
+
+                if (!string.IsNullOrEmpty(Phone))
+                {
+                    var typeCode = PhoneType switch
+                    {
+                        "Cell" => "(C)",
+                        "Home" => "(H)",
+                        "Work" => "(W)",
+                        _ => ""
+                    };
+                    phones.Add(string.IsNullOrEmpty(typeCode) ? Phone : $"{Phone}  {typeCode}");
+                }
+
+                if (!string.IsNullOrEmpty(Phone2))
+                {
+                    var typeCode2 = Phone2Type switch
+                    {
+                        "Cell" => "(C)",
+                        "Home" => "(H)",
+                        "Work" => "(W)",
+                        _ => ""
+                    };
+                    phones.Add(string.IsNullOrEmpty(typeCode2) ? Phone2 : $"{Phone2}  {typeCode2}");
+                }
+
+                return phones.Any() ? string.Join("\n", phones) : "N/A";
+            }
+        }
 
         [NotMapped]
         public string DivisionsText
@@ -84,6 +131,7 @@ namespace AutumnRidgeUSA.Models
                 return activeDivisions.Any() ? string.Join(", ", activeDivisions) : "None";
             }
         }
+
         [NotMapped]
         public string FullAddress
         {
@@ -99,9 +147,5 @@ namespace AutumnRidgeUSA.Models
                 return string.Join(", ", addressParts);
             }
         }
-        // Session management fields (should already be there)
-        [MaxLength(255)]
-        public string? CurrentSessionToken { get; set; }
-        public DateTime? SessionExpiresAt { get; set; }
     }
 }

@@ -227,6 +227,7 @@ namespace AutumnRidgeUSA.Services
         {
             var userDivisions = new List<UserDivision>();
 
+            
             // Split by common delimiters
             var divisionNames = divisionString.Split(new[] { ',', ';', '|', '/' }, StringSplitOptions.RemoveEmptyEntries);
 
