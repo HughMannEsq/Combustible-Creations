@@ -31,7 +31,18 @@ namespace AutumnRidgeUSA.Services
                     "ALTER TABLE Users ADD COLUMN CurrentSessionToken TEXT",
                     "ALTER TABLE Users ADD COLUMN SessionExpiresAt TEXT",
                     "ALTER TABLE Users ADD COLUMN LastLoginAt TEXT",
-                    "ALTER TABLE Users ADD COLUMN LastLoginIP TEXT"
+                    "ALTER TABLE Users ADD COLUMN LastLoginIP TEXT",
+                    "ALTER TABLE Users ADD COLUMN Phone TEXT",
+                    "ALTER TABLE Users ADD COLUMN PhoneType TEXT",
+                    "ALTER TABLE Users ADD COLUMN Phone2 TEXT",
+                    "ALTER TABLE Users ADD COLUMN Phone2Type TEXT",
+                    "ALTER TABLE Users ADD COLUMN Address TEXT",
+                    "ALTER TABLE Users ADD COLUMN City TEXT",
+                    "ALTER TABLE Users ADD COLUMN State TEXT",
+                    "ALTER TABLE Users ADD COLUMN ZipCode TEXT",
+                    "ALTER TABLE Users ADD COLUMN UserId TEXT",
+                    "ALTER TABLE Users ADD COLUMN ConfirmationToken TEXT",
+                    "ALTER TABLE Users ADD COLUMN ConfirmedAt TEXT"
                 };
 
                 foreach (var migration in migrations)
