@@ -25,12 +25,16 @@ if (builder.Environment.IsDevelopment())
 else
 {
     // Use PostgreSQL for Railway production
-    var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 
-    if (string.IsNullOrEmpty(connectionString))
+    if (string.IsNullOrEmpty(databaseUrl))
     {
         throw new InvalidOperationException("DATABASE_URL environment variable not found");
     }
+
+    // Parse Railway's postgresql:// URL format
+    var uri = new Uri(databaseUrl);
+    var connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.Substring(1)};Username={uri.UserInfo.Split(':')[0]};Password={uri.UserInfo.Split(':')[1]};SSL Mode=Require;Trust Server Certificate=true";
 
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(connectionString));
