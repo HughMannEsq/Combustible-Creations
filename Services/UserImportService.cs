@@ -1,153 +1,354 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿// Services/UserImportService.cs
+using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Data;
 using AutumnRidgeUSA.Models;
-using AutumnRidgeUSA.Services;
+using AutumnRidgeUSA.Services.Helpers;
+using System.Text;
 
 namespace AutumnRidgeUSA.Services
 {
-    public interface IUserImportService
-    {
-        Task<ImportResult> ImportUsersFromCsvAsync(Stream csvStream);
-        Task<ImportResult> CreateBulkUsersAsync(List<BulkUserData> users);
-    }
-
     public class UserImportService : IUserImportService
     {
         private readonly AppDbContext _context;
         private readonly ISecurityService _securityService;
-        private readonly IEmailService _emailService;
         private readonly ILogger<UserImportService> _logger;
+        private readonly ICsvParsingHelper _csvHelper;
+        private readonly IExcelParsingHelper _excelHelper;
 
         public UserImportService(
             AppDbContext context,
             ISecurityService securityService,
-            IEmailService emailService,
-            ILogger<UserImportService> logger)
+            ILogger<UserImportService> logger,
+            ICsvParsingHelper csvHelper,
+            IExcelParsingHelper excelHelper)
         {
             _context = context;
             _securityService = securityService;
-            _emailService = emailService;
             _logger = logger;
+            _csvHelper = csvHelper;
+            _excelHelper = excelHelper;
         }
 
-        public async Task<ImportResult> CreateBulkUsersAsync(List<BulkUserData> users)
+        public async Task<UserImportResult> CreateInitialUsers()
         {
-            var result = new ImportResult();
-
-            foreach (var userData in users)
+            var existingCount = await _context.Users.CountAsync();
+            if (existingCount > 0)
             {
-                try
+                return new UserImportResult
                 {
-                    // Check if user already exists
-                    var existingUser = await _context.Users
-                        .FirstOrDefaultAsync(u => u.Email.ToLower() == userData.Email.ToLower());
+                    Success = false,
+                    Message = $"Database already has {existingCount} users. Use reset endpoint instead."
+                };
+            }
 
-                    if (existingUser != null)
+            var users = new List<User>
+            {
+                await CreateUser("admin@autumnridge.com", "Admin123!", "Admin", "User", "Admin", "ADM-001"),
+                await CreateUser("client@example.com", "Client123!", "John", "Client", "Client", "CLT-001")
+            };
+
+            _context.Users.AddRange(users);
+            await _context.SaveChangesAsync();
+
+            return new UserImportResult
+            {
+                Success = true,
+                Message = "Initial users created successfully!",
+                Users = users.Select(u => new { u.Email, password = "***", u.Role }).ToList<object>(),
+                Instructions = "You can now login with any of these credentials"
+            };
+        }
+
+        public async Task<UserImportResult> ResetAndCreateUsers()
+        {
+            await ClearAllUsers();
+
+            var users = new List<User>
+            {
+                await CreateUser("admin@autumnridge.com", "Admin123!", "Admin", "User", "Admin", "ADM-001")
+            };
+
+            _context.Users.AddRange(users);
+            await _context.SaveChangesAsync();
+
+            return new UserImportResult
+            {
+                Success = true,
+                Message = "Database reset and users created successfully",
+                Users = users.Select(u => new { u.Email, password = "Admin123!", u.Role }).ToList<object>(),
+                Note = "All users have properly salted and hashed passwords"
+            };
+        }
+
+        public async Task<UserImportResult> ImportUsersFromCsv(IFormFile csvFile)
+        {
+            await ClearAllUsers();
+
+            var result = new UserImportResult();
+            var users = new List<User>();
+
+            try
+            {
+                using var stream = csvFile.OpenReadStream();
+                using var reader = new StreamReader(stream);
+
+                var parsedData = await _csvHelper.ParseCsvFile(reader);
+                if (!parsedData.IsValid)
+                {
+                    return new UserImportResult
                     {
-                        result.Errors.Add($"User already exists: {userData.Email}");
-                        continue;
-                    }
-
-                    // Generate temporary password
-                    var tempPassword = GenerateTemporaryPassword();
-                    var salt = _securityService.GenerateSalt();
-                    var hash = _securityService.HashPassword(tempPassword, salt);
-
-                    // Generate unique UserId
-                    var userId = await GenerateUniqueUserId();
-
-                    var user = new User
-                    {
-                        Email = userData.Email.Trim(),
-                        PasswordHash = hash,
-                        Salt = salt,
-                        FirstName = userData.FirstName?.Trim(),
-                        LastName = userData.LastName?.Trim(),
-                        Phone = userData.Phone?.Trim(),
-                        Address = userData.Address?.Trim(),
-                        City = userData.City?.Trim(),
-                        State = userData.State?.Trim(),
-                        ZipCode = userData.ZipCode?.Trim(),
-                        Role = "Client",
-                        IsConfirmed = true, // Auto-confirm imported users
-                        UserId = userId,
-                        CreatedAt = DateTime.UtcNow,
-                        ConfirmedAt = DateTime.UtcNow
+                        Success = false,
+                        Message = parsedData.ErrorMessage ?? "Invalid CSV format"
                     };
-
-                    _context.Users.Add(user);
-                    await _context.SaveChangesAsync();
-
-                    // Send welcome email with temporary password
-                    await SendWelcomeEmail(user, tempPassword);
-
-                    result.SuccessCount++;
-                    result.CreatedUsers.Add(new CreatedUserInfo
-                    {
-                        Email = user.Email,
-                        UserId = user.UserId,
-                        TemporaryPassword = tempPassword
-                    });
-
-                    _logger.LogInformation("Bulk user created: {Email} with UserId: {UserId}",
-                        user.Email, user.UserId);
                 }
-                catch (Exception ex)
+
+                foreach (var userData in parsedData.UserData)
                 {
-                    result.Errors.Add($"Error creating user {userData.Email}: {ex.Message}");
-                    _logger.LogError(ex, "Error creating bulk user: {Email}", userData.Email);
+                    try
+                    {
+                        if (!IsValidUserData(userData, out var validationError))
+                        {
+                            result.Errors.Add($"Row {userData.RowNumber}: {validationError}");
+                            continue;
+                        }
+
+                        var user = await CreateUserFromData(userData);
+                        users.Add(user);
+
+                        result.Users.Add(new
+                        {
+                            email = user.Email,
+                            role = user.Role,
+                            userId = user.UserId,
+                            name = $"{user.FirstName} {user.LastName}"
+                        });
+
+                        _logger.LogInformation("Created user from CSV: {Email} with role: {Role}", user.Email, user.Role);
+                    }
+                    catch (Exception ex)
+                    {
+                        result.Errors.Add($"Row {userData.RowNumber}: {ex.Message}");
+                        _logger.LogError(ex, "Error processing CSV row {RowNumber}", userData.RowNumber);
+                    }
                 }
+
+                _context.Users.AddRange(users);
+                await _context.SaveChangesAsync();
+
+                result.Success = true;
+                result.Message = $"Successfully created {users.Count} users from CSV";
+                result.SuccessCount = users.Count;
+                result.ErrorCount = result.Errors.Count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing CSV file");
+                result.Success = false;
+                result.Message = "Error processing CSV file";
+                result.Errors.Add(ex.Message);
             }
 
             return result;
         }
 
-        public async Task<ImportResult> ImportUsersFromCsvAsync(Stream csvStream)
+        public async Task<UserImportResult> ImportUsersFromExcel(IFormFile excelFile)
         {
-            // Parse CSV and convert to BulkUserData list
-            // Implementation depends on your CSV format
-            var users = new List<BulkUserData>();
+            await ClearAllUsers();
 
-            // Example CSV parsing (you can enhance this)
-            using var reader = new StreamReader(csvStream);
-            string line;
-            var isFirstLine = true;
+            var result = new UserImportResult();
+            var users = new List<User>();
 
-            while ((line = await reader.ReadLineAsync()) != null)
+            try
             {
-                if (isFirstLine)
+                using var stream = excelFile.OpenReadStream();
+                var parsedData = await _excelHelper.ParseExcelFile(stream);
+
+                if (!parsedData.IsValid)
                 {
-                    isFirstLine = false;
-                    continue; // Skip header
+                    return new UserImportResult
+                    {
+                        Success = false,
+                        Message = parsedData.ErrorMessage ?? "Invalid Excel format"
+                    };
                 }
 
-                var parts = line.Split(',');
-                if (parts.Length >= 2)
+                foreach (var userData in parsedData.UserData)
                 {
-                    users.Add(new BulkUserData
+                    try
                     {
-                        Email = parts[0].Trim('"'),
-                        FirstName = parts.Length > 1 ? parts[1].Trim('"') : "",
-                        LastName = parts.Length > 2 ? parts[2].Trim('"') : "",
-                        Phone = parts.Length > 3 ? parts[3].Trim('"') : null,
-                        Address = parts.Length > 4 ? parts[4].Trim('"') : null,
-                        City = parts.Length > 5 ? parts[5].Trim('"') : null,
-                        State = parts.Length > 6 ? parts[6].Trim('"') : null,
-                        ZipCode = parts.Length > 7 ? parts[7].Trim('"') : null
-                    });
+                        if (!IsValidUserData(userData, out var validationError))
+                        {
+                            result.Errors.Add($"Row {userData.RowNumber}: {validationError}");
+                            continue;
+                        }
+
+                        var user = await CreateUserFromData(userData);
+                        users.Add(user);
+
+                        result.Users.Add(new
+                        {
+                            email = user.Email,
+                            role = user.Role,
+                            userId = user.UserId,
+                            name = $"{user.FirstName} {user.LastName}"
+                        });
+
+                        _logger.LogInformation("Created user from Excel: {Email} with role: {Role}", user.Email, user.Role);
+
+                        // Save in batches to avoid memory issues
+                        if (users.Count % 50 == 0)
+                        {
+                            _context.Users.AddRange(users);
+                            await _context.SaveChangesAsync();
+                            users.Clear();
+                            _logger.LogInformation("Saved batch of 50 users. Total so far: {Count}", result.Users.Count);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        result.Errors.Add($"Row {userData.RowNumber}: {ex.Message}");
+                        _logger.LogError(ex, "Error processing Excel row {RowNumber}", userData.RowNumber);
+                    }
                 }
+
+                // Save remaining users
+                if (users.Any())
+                {
+                    _context.Users.AddRange(users);
+                    await _context.SaveChangesAsync();
+                }
+
+                result.Success = true;
+                result.Message = $"Successfully created {result.Users.Count} users from Excel file";
+                result.SuccessCount = result.Users.Count;
+                result.ErrorCount = result.Errors.Count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing Excel file");
+                result.Success = false;
+                result.Message = "Error processing Excel file";
+                result.Errors.Add(ex.Message);
             }
 
-            return await CreateBulkUsersAsync(users);
+            return result;
         }
 
-        private string GenerateTemporaryPassword()
+        public async Task<List<UserSummary>> GetAllUsers()
         {
-            // Generate a secure temporary password
-            var random = new Random();
-            var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            return new string(Enumerable.Repeat(chars, 8)
-                .Select(s => s[random.Next(s.Length)]).ToArray()) + "!";
+            return await _context.Users
+                .Select(u => new UserSummary
+                {
+                    Email = u.Email,
+                    Role = u.Role,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    UserId = u.UserId,
+                    IsConfirmed = u.IsConfirmed,
+                    HasValidSalt = !string.IsNullOrEmpty(u.Salt) && u.Salt != "TEMP_SALT_NEEDS_RESET"
+                })
+                .ToListAsync();
+        }
+
+        private async Task ClearAllUsers()
+        {
+            var existingUsers = await _context.Users.ToListAsync();
+            _context.Users.RemoveRange(existingUsers);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task<User> CreateUser(string email, string password, string firstName, string lastName, string role, string userId)
+        {
+            var salt = _securityService.GenerateSalt();
+            var hash = _securityService.HashPassword(password, salt);
+
+            return new User
+            {
+                Email = email,
+                FirstName = firstName,
+                LastName = lastName,
+                PasswordHash = hash,
+                Salt = salt,
+                Role = role,
+                IsConfirmed = true,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                ConfirmedAt = DateTime.UtcNow
+            };
+        }
+
+        private async Task<User> CreateUserFromData(UserData userData)
+        {
+            var salt = _securityService.GenerateSalt();
+            var hash = _securityService.HashPassword(userData.Password!, salt);
+            var userId = await GenerateUniqueUserId();
+
+            return new User
+            {
+                Email = userData.Email!,
+                FirstName = userData.FirstName ?? "Unknown",
+                LastName = userData.LastName ?? "User",
+                PasswordHash = hash,
+                Salt = salt,
+                Role = userData.Role!,
+                IsConfirmed = true,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                ConfirmedAt = DateTime.UtcNow,
+                Phone = userData.Phone,
+                PhoneType = ValidatePhoneType(userData.PhoneType),
+                Phone2 = userData.Phone2,
+                Phone2Type = ValidatePhoneType(userData.Phone2Type),
+                Address = userData.Address,
+                City = userData.City,
+                State = userData.State,
+                ZipCode = userData.ZipCode
+            };
+        }
+
+        private string? ValidatePhoneType(string? phoneType)
+        {
+            if (string.IsNullOrEmpty(phoneType)) return null;
+
+            return phoneType.ToLower() switch
+            {
+                "cell" or "mobile" or "c" => "Cell",
+                "home" or "h" => "Home",
+                "work" or "office" or "w" => "Work",
+                _ => null
+            };
+        }
+
+        private bool IsValidUserData(UserData userData, out string error)
+        {
+            error = string.Empty;
+
+            if (string.IsNullOrEmpty(userData.Email))
+            {
+                error = "Email is required";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(userData.Password))
+            {
+                error = "Password is required";
+                return false;
+            }
+
+            if (!IsValidRole(userData.Role))
+            {
+                error = $"Invalid role '{userData.Role}'. Must be Admin, Client, or Manager";
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool IsValidRole(string? role)
+        {
+            if (string.IsNullOrEmpty(role)) return false;
+            var validRoles = new[] { "Admin", "Client", "Manager" };
+            return validRoles.Contains(role, StringComparer.OrdinalIgnoreCase);
         }
 
         private async Task<string> GenerateUniqueUserId()
@@ -164,109 +365,5 @@ namespace AutumnRidgeUSA.Services
 
             return userId;
         }
-
-        private async Task SendWelcomeEmail(User user, string tempPassword)
-        {
-            try
-            {
-                var subject = "Account Migrated - Welcome to Autumn Ridge LLC";
-                var htmlBody = $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                   color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
-        .content {{ background: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0; 
-                    border-radius: 0 0 10px 10px; }}
-        .credentials {{ background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; 
-                       margin: 20px 0; border-radius: 8px; text-align: center; }}
-        .temp-password {{ font-size: 18px; font-weight: bold; color: #856404; 
-                         letter-spacing: 1px; background: #fff; padding: 10px; 
-                         border-radius: 5px; margin: 10px 0; }}
-        .btn {{ display: inline-block; padding: 14px 30px; background: #667eea; 
-                color: white; text-decoration: none; border-radius: 25px; 
-                margin: 20px 0; font-weight: bold; }}
-    </style>
-</head>
-<body>
-    <div class='container'>
-        <div class='header'>
-            <h1>Your Account Has Been Migrated</h1>
-            <p style='margin: 0; opacity: 0.9;'>Welcome to the New Autumn Ridge LLC System</p>
-        </div>
-        <div class='content'>
-            <h2>Hello {user.FirstName} {user.LastName}!</h2>
-            <p>Your account has been successfully migrated to our new system.</p>
-            
-            <div class='credentials'>
-                <h3>Your Login Credentials</h3>
-                <p><strong>Email:</strong> {user.Email}</p>
-                <p><strong>User ID:</strong> {user.UserId}</p>
-                <p><strong>Temporary Password:</strong></p>
-                <div class='temp-password'>{tempPassword}</div>
-                <p style='color: #856404; font-size: 14px;'>
-                    <strong>Important:</strong> Please change this password after your first login
-                </p>
-            </div>
-
-            <p style='text-align: center;'>
-                <a href='https://your-railway-app.up.railway.app' class='btn'>Login Now</a>
-            </p>
-
-            <p><strong>Next Steps:</strong></p>
-            <ol>
-                <li>Click the login button above</li>
-                <li>Use your email and temporary password</li>
-                <li>Change your password immediately</li>
-                <li>Update your profile information</li>
-            </ol>
-            
-            <p>Best regards,<br>The Autumn Ridge LLC Team</p>
-        </div>
-    </div>
-</body>
-</html>";
-
-                var success = await _emailService.SendEmailAsync(user.Email, subject, htmlBody);
-
-                if (!success)
-                {
-                    _logger.LogError("Failed to send migration email to {Email}", user.Email);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Exception sending migration email to {Email}", user.Email);
-            }
-        }
-    }
-
-    public class BulkUserData
-    {
-        public string Email { get; set; } = string.Empty;
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
-        public string? Phone { get; set; }
-        public string? Address { get; set; }
-        public string? City { get; set; }
-        public string? State { get; set; }
-        public string? ZipCode { get; set; }
-    }
-
-    public class ImportResult
-    {
-        public int SuccessCount { get; set; }
-        public List<string> Errors { get; set; } = new();
-        public List<CreatedUserInfo> CreatedUsers { get; set; } = new();
-    }
-
-    public class CreatedUserInfo
-    {
-        public string Email { get; set; } = string.Empty;
-        public string? UserId { get; set; }
-        public string TemporaryPassword { get; set; } = string.Empty;
     }
 }

@@ -1,15 +1,17 @@
+// Program.cs - Updated with migration services integration
+
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Data;
 using AutumnRidgeUSA.Services;
-using AutumnRidgeUSA.Middleware; // Add this
+using AutumnRidgeUSA.Services.Helpers;
+using AutumnRidgeUSA.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Railway port configuration - Railway sets PORT environment variable
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
-builder.Services.AddScoped<ExcelImportService>();
 
 // Add services to the container - ALL services must be added BEFORE builder.Build()
 
@@ -28,17 +30,27 @@ else
         options.UseSqlite("Data Source=./app.db"));
 }
 
-// Add this line with your other service registrations:
+// Core services
 builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // For MVC controllers
-// Add this with your other service registrations
-builder.Services.AddScoped<IUserImportService, UserImportService>();
 
-// Register Email Service
+// Migration and admin services
+builder.Services.Configure<AdminSecurityOptions>(
+    builder.Configuration.GetSection("AdminSecurity"));
+builder.Services.AddScoped<IDatabaseMigrationService, DatabaseMigrationService>();
+builder.Services.AddScoped<IUserImportService, UserImportService>();
+builder.Services.AddScoped<IAdminSecurityService, AdminSecurityService>();
+builder.Services.AddScoped<ICsvParsingHelper, CsvParsingHelper>();
+builder.Services.AddScoped<IExcelParsingHelper, ExcelParsingHelper>();
+
+// Legacy services (keeping for compatibility)
+builder.Services.AddScoped<ExcelImportService>();
+
+// Email Service
 builder.Services.Configure<EmailSettings>(
-    builder.Configuration.GetSection("EmailSettings"));
+    builder.Configuration.GetSection("Email")); // Updated to match your appsettings.json structure
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Build the app AFTER all services are registered
