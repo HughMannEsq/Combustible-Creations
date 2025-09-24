@@ -60,6 +60,7 @@ namespace AutumnRidgeUSA.Services
                     }
                 }
 
+
                 // Update users without salt
                 try
                 {
