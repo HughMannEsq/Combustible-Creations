@@ -128,12 +128,15 @@ namespace AutumnRidgeUSA.Services
                     })
                     .FirstOrDefaultAsync();
 
+                var databaseProvider = _context.Database.ProviderName?.Contains("Npgsql") == true ? "PostgreSQL" : "SQLite";
+
                 return new DatabaseStatus
                 {
                     Status = "connected",
                     UserCount = userCount,
                     HasSessionColumns = hasSessionColumns,
                     SampleUser = sampleUser,
+                    Database = databaseProvider,  // Add this line
                     Recommendation = hasSessionColumns
                         ? "Database is ready for session management"
                         : "Run migration to add session columns"
