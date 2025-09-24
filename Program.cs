@@ -73,22 +73,25 @@ using (var scope = app.Services.CreateScope())
 
     if (app.Environment.IsDevelopment())
     {
+        // Development: Use EnsureCreated for SQLite
         context.Database.EnsureCreated();
     }
     else
     {
-        // For PostgreSQL, use EnsureCreated to create initial schema
+        // Production: Use proper migrations for PostgreSQL
         try
         {
-            context.Database.EnsureCreated(); // Change this line
+            context.Database.Migrate();
         }
         catch (Exception ex)
         {
+            // Log error but don't crash the app
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "Database creation failed");
+            logger.LogError(ex, "Database migration failed");
         }
     }
 }
+
 // Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
