@@ -73,21 +73,27 @@ using (var scope = app.Services.CreateScope())
 
     if (app.Environment.IsDevelopment())
     {
-        // Development: Use EnsureCreated for SQLite
         context.Database.EnsureCreated();
     }
     else
     {
-        // Production: Use proper migrations for PostgreSQL
+        // For PostgreSQL, force fresh database creation
         try
         {
-            context.Database.Migrate();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Starting PostgreSQL database creation...");
+
+            context.Database.EnsureDeleted();
+            logger.LogInformation("Database deleted");
+
+            context.Database.EnsureCreated();
+            logger.LogInformation("Database created successfully");
         }
         catch (Exception ex)
         {
-            // Log error but don't crash the app
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "Database migration failed");
+            logger.LogError(ex, "Database creation failed");
+            throw; // Re-throw to see the error
         }
     }
 }
