@@ -37,7 +37,7 @@ namespace AutumnRidgeUSA.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Divisions");
+                    b.ToTable("Divisions", (string)null);
 
                     b.HasData(
                         new
@@ -109,7 +109,7 @@ namespace AutumnRidgeUSA.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("StorageContracts");
+                    b.ToTable("StorageContracts", (string)null);
                 });
 
             modelBuilder.Entity("AutumnRidgeUSA.Models.TempSignup", b =>
@@ -159,7 +159,7 @@ namespace AutumnRidgeUSA.Migrations
                     b.HasIndex("VerificationToken")
                         .IsUnique();
 
-                    b.ToTable("TempSignups");
+                    b.ToTable("TempSignups", (string)null);
                 });
 
             modelBuilder.Entity("AutumnRidgeUSA.Models.User", b =>
@@ -244,7 +244,7 @@ namespace AutumnRidgeUSA.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("AutumnRidgeUSA.Models.UserDivision", b =>
@@ -272,7 +272,7 @@ namespace AutumnRidgeUSA.Migrations
                     b.HasIndex("UserId", "DivisionId")
                         .IsUnique();
 
-                    b.ToTable("UserDivisions");
+                    b.ToTable("UserDivisions", (string)null);
                 });
 
             modelBuilder.Entity("AutumnRidgeUSA.Models.Storage.StorageContract", b =>

@@ -1,4 +1,4 @@
-// Program.cs - Updated with migration services integration
+// Program.cs - Updated with PostgreSQL support
 
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
@@ -18,16 +18,22 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // Database configuration - environment-specific
 if (builder.Environment.IsDevelopment())
 {
-    // Use SQLite for local development
+    // Keep SQLite for local development
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=app.db"));
 }
 else
 {
-    // For Railway production, use SQLite (Railway supports file storage)
-    // Use relative path that works in Railway's file system
+    // Use PostgreSQL for Railway production
+    var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException("DATABASE_URL environment variable not found");
+    }
+
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlite("Data Source=./app.db"));
+        options.UseNpgsql(connectionString));
 }
 
 // Core services
@@ -56,12 +62,30 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 // Build the app AFTER all services are registered
 var app = builder.Build();
 
-// Database initialization - Railway-friendly approach
+// Database initialization
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // Always use EnsureCreated for SQLite on Railway
-    context.Database.EnsureCreated();
+
+    if (app.Environment.IsDevelopment())
+    {
+        // Development: Use EnsureCreated for SQLite
+        context.Database.EnsureCreated();
+    }
+    else
+    {
+        // Production: Use proper migrations for PostgreSQL
+        try
+        {
+            context.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't crash the app
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "Database migration failed");
+        }
+    }
 }
 
 // Configure the HTTP request pipeline
