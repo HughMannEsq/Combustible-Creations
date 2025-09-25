@@ -6,6 +6,7 @@ using AutumnRidgeUSA.Data;
 using AutumnRidgeUSA.Services;
 using AutumnRidgeUSA.Services.Helpers;
 using AutumnRidgeUSA.Middleware;
+using ClosedXML.Excel;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,7 @@ builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // For MVC controllers
+builder.Services.AddScoped<IStorageImportService, StorageImportService>();
 
 // Migration and admin services
 builder.Services.Configure<AdminSecurityOptions>(

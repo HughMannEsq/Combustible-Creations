@@ -1,31 +1,662 @@
 ﻿@page
+@model AutumnRidgeUSA.Pages.Subdomains.StorageModel
 @{
     ViewData["Title"] = "Storage Services";
     var subdomain = HttpContext.Items["Subdomain"]?.ToString() ?? "storage";
+    var isAdmin = User.IsInRole("Admin");
 }
 
 <div class="container">
     <div class="row">
         <div class="col-12">
             <h1>Autumn Ridge USA - Storage Division</h1>
-            <p class="lead">Secure storage solutions for your needs.</p>
 
-            <div class="row mt-4">
-                <div class="col-md-6">
-                    <h3>Storage Options</h3>
-                    <ul>
-                        <li>Climate Controlled Units</li>
-                        <li>Standard Storage Units</li>
-                        <li>Vehicle Storage</li>
-                        <li>Business Storage</li>
-                    </ul>
+            @if (isAdmin)
+            {
+                <!-- Admin Section -->
+                <div class="admin-section">
+                    <div class="admin-header">
+                        <h2>Admin Dashboard</h2>
+                        <div class="admin-controls">
+                            <button onclick="loadStorageData()" class="btn btn-primary">Load Storage Data</button>
+                            <button onclick="showImportModal()" class="btn btn-success">Import Excel</button>
+                            <button onclick="clearAllData()" class="btn btn-danger" style="margin-left: 10px;">Clear All Data</button>
+                        </div>
+                    </div>
+
+                    <!-- Import Modal -->
+                    <div id="importModal" class="modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>Import Storage Data from Excel</h3>
+                                <span class="close" onclick="closeImportModal()">&times;</span>
+                            </div>
+                            <div class="modal-body">
+                                <form id="importForm" enctype="multipart/form-data">
+                                    <div class="form-group">
+                                        <label>Excel File:</label>
+                                        <input type="file" id="excelFile" accept=".xlsx,.xls" required />
+                                        <small class="form-text text-muted">
+                                            Expected columns: Move-In Date, Unit Size, Gross Rent, Payment Cycle, Security Deposit, SD Balance, Online, Autopay, Email, First Name, Last Name, Phone
+                                        </small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Migration Key:</label>
+                                        <input type="password" id="migrationKey" placeholder="Enter admin key" required />
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Import Data</button>
+                                </form>
+                                <div id="importResult" class="import-result"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Storage Data Display -->
+                    <div id="storageDataSection" class="storage-data-section">
+                        <div class="data-tabs">
+                            <button class="tab-btn active" onclick="showTab('units')">Storage Units</button>
+                            <button class="tab-btn" onclick="showTab('contracts')">Active Contracts</button>
+                        </div>
+
+                        <div id="units-tab" class="tab-content active">
+                            <h3>Storage Units Overview</h3>
+                            <div id="unitsStats" class="stats-row"></div>
+                            <div id="unitsTable" class="data-table-container"></div>
+                        </div>
+
+                        <div id="contracts-tab" class="tab-content">
+                            <h3>Active Storage Contracts</h3>
+                            <div id="contractsStats" class="stats-row"></div>
+                            <div id="contractsTable" class="data-table-container"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <h3>Reserve Your Unit</h3>
-                    <p>Find the perfect storage solution for your needs.</p>
-                    <a href="/Auth/Register" class="btn btn-primary">Reserve Now</a>
+            }
+            else
+            {
+                <!-- Public Section -->
+                <p class="lead">Secure storage solutions for your needs.</p>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h3>Storage Options</h3>
+                        <ul>
+                            <li>Climate Controlled Units</li>
+                            <li>Standard Storage Units</li>
+                            <li>Vehicle Storage</li>
+                            <li>Business Storage</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h3>Reserve Your Unit</h3>
+                        <p>Find the perfect storage solution for your needs.</p>
+                        <a href="/Auth/Register" class="btn btn-primary">Reserve Now</a>
+                    </div>
                 </div>
-            </div>
+            }
         </div>
     </div>
 </div>
+
+@if (isAdmin)
+{
+    <style>
+        .admin-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .admin-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 0;
+            border: 1px solid #888;
+            border-radius: 8px;
+            width: 600px;
+            max-width: 90%;
+        }
+
+        .modal-header {
+            background-color: #007bff;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #f0f0f0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .import-result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .import-result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .import-result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .data-tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #007bff;
+            background-color: #f8f9fa;
+        }
+
+        .tab-btn.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 150px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .data-table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .storage-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .storage-table th {
+            background-color: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .storage-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+
+        .storage-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .status-occupied {
+            background-color: #dc3545;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-available {
+            background-color: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .tenant-info {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .contract-users {
+            font-size: 12px;
+        }
+
+        .primary-user {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+
+    <script>
+        let storageData = {};
+
+        function showImportModal() {
+            document.getElementById('importModal').style.display = 'block';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+            document.getElementById('importResult').style.display = 'none';
+            document.getElementById('importForm').reset();
+        }
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Hide all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        async function loadStorageData() {
+            const key = prompt('Enter migration key:');
+            if (!key) return;
+
+            try {
+                // Load units data
+                const unitsResponse = await fetch(`/api/storage-admin/units?key=${encodeURIComponent(key)}`);
+                if (!unitsResponse.ok) {
+                    throw new Error('Failed to load units data');
+                }
+                const unitsData = await unitsResponse.json();
+
+                // Load contracts data
+                const contractsResponse = await fetch(`/api/storage-admin/contracts?key=${encodeURIComponent(key)}`);
+                if (!contractsResponse.ok) {
+                    throw new Error('Failed to load contracts data');
+                }
+                const contractsData = await contractsResponse.json();
+
+                storageData = { units: unitsData, contracts: contractsData };
+                displayStorageData();
+            } catch (error) {
+                alert('Error loading storage data: ' + error.message);
+            }
+        }
+
+        function displayStorageData() {
+            displayUnitsData();
+            displayContractsData();
+        }
+
+        function displayUnitsData() {
+            const unitsData = storageData.units;
+
+            // Display stats
+            const unitsStats = document.getElementById('unitsStats');
+            unitsStats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${unitsData.totalUnits}</div>
+                    <div class="stat-label">Total Units</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${unitsData.occupiedUnits}</div>
+                    <div class="stat-label">Occupied</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${unitsData.availableUnits}</div>
+                    <div class="stat-label">Available</div>
+                </div>
+            `;
+
+            // Display units table
+            const unitsTable = document.getElementById('unitsTable');
+            let tableHtml = `
+                <table class="storage-table">
+                    <thead>
+                        <tr>
+                            <th>Unit ID</th>
+                            <th>Size</th>
+                            <th>Base Rent</th>
+                            <th>Status</th>
+                            <th>Current Tenant</th>
+                            <th>Move-In Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            unitsData.units.forEach(unit => {
+                const status = unit.isOccupied ?
+                    '<span class="status-occupied">Occupied</span>' :
+                    '<span class="status-available">Available</span>';
+
+                const tenant = unit.currentContract ? unit.currentContract.primaryTenant || 'N/A' : 'N/A';
+                const moveInDate = unit.currentContract && unit.currentContract.moveInDate ?
+                    new Date(unit.currentContract.moveInDate).toLocaleDateString() : 'N/A';
+
+                tableHtml += `
+                    <tr>
+                        <td><strong>${unit.unitId}</strong></td>
+                        <td>${unit.unitSize}</td>
+                        <td>${unit.baseRent.toFixed(2)}</td>
+                        <td>${status}</td>
+                        <td>${tenant}</td>
+                        <td>${moveInDate}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table>';
+            unitsTable.innerHTML = tableHtml;
+        }
+
+        function displayContractsData() {
+            const contractsData = storageData.contracts;
+
+            // Display stats
+            const contractsStats = document.getElementById('contractsStats');
+            contractsStats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${contractsData.totalContracts}</div>
+                    <div class="stat-label">Total Contracts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${contractsData.activeContracts}</div>
+                    <div class="stat-label">Active Contracts</div>
+                </div>
+            `;
+
+            // Display contracts table
+            const contractsTable = document.getElementById('contractsTable');
+            let tableHtml = `
+                <table class="storage-table">
+                    <thead>
+                        <tr>
+                            <th>Contract #</th>
+                            <th>Unit</th>
+                            <th>Tenants</th>
+                            <th>Gross Rent</th>
+                            <th>Payment Cycle</th>
+                            <th>Security Deposit</th>
+                            <th>Online/Autopay</th>
+                            <th>Move-In Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            contractsData.contracts.forEach(contract => {
+                const tenants = contract.users.map(user => {
+                    const className = user.isPrimary ? 'primary-user' : '';
+                    return `<div class="${className}">${user.name} ${user.isPrimary ? '(Primary)' : ''}</div>`;
+                }).join('');
+
+                const onlineAutopay = `
+                    <div>Online: ${contract.isOnline ? 'Yes' : 'No'}</div>
+                    <div>Autopay: ${contract.hasAutopay ? 'Yes' : 'No'}</div>
+                `;
+
+                tableHtml += `
+                    <tr>
+                        <td><strong>${contract.contractNumber}</strong></td>
+                        <td>${contract.unit.id} (${contract.unit.size})</td>
+                        <td class="contract-users">${tenants}</td>
+                        <td>${contract.grossRent.toFixed(2)}</td>
+                        <td>${contract.paymentCycle}</td>
+                        <td>${contract.securityDeposit.toFixed(2)}</td>
+                        <td class="tenant-info">${onlineAutopay}</td>
+                        <td>${new Date(contract.moveInDate).toLocaleDateString()}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table>';
+            contractsTable.innerHTML = tableHtml;
+        }
+
+        async function clearAllData() {
+            if (!confirm('Are you sure you want to delete ALL storage data? This cannot be undone.')) {
+                return;
+            }
+
+            const key = prompt('Enter migration key to confirm:');
+            if (!key) return;
+
+            try {
+                const response = await fetch(`/api/storage-admin/clear-all-storage?key=${encodeURIComponent(key)}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+                    // Clear the display
+                    document.getElementById('unitsStats').innerHTML = '';
+                    document.getElementById('unitsTable').innerHTML = '';
+                    document.getElementById('contractsStats').innerHTML = '';
+                    document.getElementById('contractsTable').innerHTML = '';
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to clear data'));
+                }
+            } catch (error) {
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+
+        // Handle import form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('importForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const fileInput = document.getElementById('excelFile');
+                const keyInput = document.getElementById('migrationKey');
+                const resultDiv = document.getElementById('importResult');
+
+                if (!fileInput.files[0]) {
+                    alert('Please select an Excel file');
+                    return;
+                }
+
+                if (!keyInput.value) {
+                    alert('Please enter migration key');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('excelFile', fileInput.files[0]);
+
+                try {
+                    const response = await fetch(`/api/storage-admin/import-excel?key=${encodeURIComponent(keyInput.value)}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    resultDiv.style.display = 'block';
+
+                    if (result.success) {
+                        resultDiv.className = 'import-result success';
+                        resultDiv.innerHTML = `
+                            <strong>Import Successful!</strong><br>
+                            ${result.message}<br>
+                            Success: ${result.successCount}, Errors: ${result.errorCount}
+                            ${result.warnings && result.warnings.length > 0 ? `<br>Warnings: ${result.warnings.length}` : ''}
+                        `;
+
+                        // Auto-refresh data after successful import
+                        setTimeout(() => {
+                            loadStorageData();
+                        }, 2000);
+                    } else {
+                        resultDiv.className = 'import-result error';
+                        resultDiv.innerHTML = `
+                            <strong>Import Failed:</strong><br>
+                            ${result.message}<br>
+                            ${result.errors ? result.errors.join('<br>') : ''}
+                        `;
+                    }
+                } catch (error) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'import-result error';
+                    resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                }
+            });
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('importModal');
+            if (event.target == modal) {
+                closeImportModal();
+            }
+        }
+    </script>
+}

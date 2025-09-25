@@ -361,6 +361,11 @@
                     loginSuccessMessage.textContent = message;
                     loginSuccessMessage.style.display = 'block';
                 }
+            // Simple function to navigate to storage subdomain page
+                function goToStorageSubdomain() {
+            // Use the path that your middleware already handles
+                     window.location.href = '/storage';
+        }
 
                 loginForm.addEventListener('submit', async function(e) {
                     e.preventDefault();

@@ -11,10 +11,14 @@ namespace AutumnRidgeUSA.Data
         }
 
         public DbSet<User> Users { get; set; } = null!;
-        public DbSet<StorageContract> StorageContracts { get; set; } = null!;
         public DbSet<TempSignup> TempSignups { get; set; } = null!;
         public DbSet<Division> Divisions { get; set; } = null!;
         public DbSet<UserDivision> UserDivisions { get; set; } = null!;
+
+        // NEW Storage Tables (replacing the old single StorageContract table)
+        public DbSet<StorageUnit> StorageUnits { get; set; } = null!;
+        public DbSet<StorageContract> StorageContracts { get; set; } = null!;
+        public DbSet<StorageContractUser> StorageContractUsers { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -51,16 +55,52 @@ namespace AutumnRidgeUSA.Data
                 entity.Property(e => e.UserId).HasMaxLength(20);
             });
 
-            // Configure StorageContract entity - UPDATED to allow multiple contracts per user
+            // NEW Storage Configuration
+            // Storage Unit configuration
+            modelBuilder.Entity<StorageUnit>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.UnitId).IsUnique();
+                entity.Property(e => e.UnitId).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.UnitSize).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Description).HasMaxLength(100);
+            });
+
+            // Storage Contract configuration
             modelBuilder.Entity<StorageContract>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.ContractNumber).IsUnique();
+                entity.Property(e => e.ContractNumber).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.PaymentCycle).IsRequired().HasMaxLength(20);
 
-                // Change to one-to-many relationship (one user can have many storage contracts)
-                entity.HasOne(sc => sc.User)
-                    .WithMany() // User can have multiple storage contracts
-                    .HasForeignKey(sc => sc.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                // Relationship with StorageUnit
+                entity.HasOne(e => e.StorageUnit)
+                      .WithMany(u => u.Contracts)
+                      .HasForeignKey(e => e.StorageUnitId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Storage Contract User configuration
+            modelBuilder.Entity<StorageContractUser>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Composite unique index to prevent duplicate user-contract associations
+                entity.HasIndex(e => new { e.StorageContractId, e.UserId }).IsUnique();
+                entity.Property(e => e.AccessLevel).HasMaxLength(20).HasDefaultValue("Full");
+
+                // Relationship with StorageContract
+                entity.HasOne(e => e.StorageContract)
+                      .WithMany(c => c.ContractUsers)
+                      .HasForeignKey(e => e.StorageContractId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Relationship with User
+                entity.HasOne(e => e.User)
+                      .WithMany() // User doesn't need back navigation
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Division configurations
@@ -97,13 +137,13 @@ namespace AutumnRidgeUSA.Data
                 entity.Property(e => e.Description).HasMaxLength(500);
             });
 
-            // Seed current schema version
+            // Updated schema version for new storage structure
             modelBuilder.Entity<SchemaVersion>().HasData(
                 new SchemaVersion
                 {
-                    Version = "1.2-security",
+                    Version = "1.3-storage-refactor",
                     AppliedAt = DateTime.UtcNow,
-                    Description = "Added security columns: Salt, CurrentSessionToken, SessionExpiresAt, LastLoginAt, LastLoginIP"
+                    Description = "Refactored storage to use StorageUnit, StorageContract, and StorageContractUser tables"
                 }
             );
 
