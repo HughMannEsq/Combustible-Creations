@@ -2,7 +2,10 @@
 // Refactored clean version
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore; // Add this line
 using AutumnRidgeUSA.Services;
+using AutumnRidgeUSA.Data;
+
 
 namespace AutumnRidgeUSA.Controllers
 {
@@ -14,17 +17,20 @@ namespace AutumnRidgeUSA.Controllers
         private readonly IUserImportService _userImportService;
         private readonly IAdminSecurityService _securityService;
         private readonly ILogger<DatabaseMigrationController> _logger;
+        private readonly AppDbContext _context; // Add this line
 
         public DatabaseMigrationController(
             IDatabaseMigrationService migrationService,
             IUserImportService userImportService,
             IAdminSecurityService securityService,
-            ILogger<DatabaseMigrationController> logger)
+            ILogger<DatabaseMigrationController> logger,
+              AppDbContext context) // Add this parameter)
         {
             _migrationService = migrationService;
             _userImportService = userImportService;
             _securityService = securityService;
             _logger = logger;
+            _context = context; // Add this assignment
         }
 
         [HttpGet("migrate-database")]
@@ -200,7 +206,69 @@ namespace AutumnRidgeUSA.Controllers
                 return StatusCode(500, new { error = "Error processing CSV file", details = ex.Message });
             }
         }
+        [HttpGet("create-storage-tables")]
+        public async Task<IActionResult> CreateStorageTables([FromQuery] string key)
+        {
+            if (!_securityService.ValidateMigrationKey(key))
+                return Unauthorized("Invalid key");
 
+            try
+            {
+                var sql = @"
+            CREATE TABLE IF NOT EXISTS ""StorageUnits"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""UnitId"" VARCHAR(50) NOT NULL,
+                ""UnitSize"" VARCHAR(20) NOT NULL,
+                ""BaseRent"" DECIMAL(10,2) NOT NULL DEFAULT 0,
+                ""Description"" VARCHAR(100),
+                ""IsActive"" BOOLEAN NOT NULL DEFAULT true,
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW()
+            );
+            
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_StorageUnits_UnitId"" ON ""StorageUnits"" (""UnitId"");
+            
+            CREATE TABLE IF NOT EXISTS ""StorageContracts"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""ContractNumber"" VARCHAR(20) NOT NULL,
+                ""StorageUnitId"" INTEGER NOT NULL,
+                ""MoveInDate"" TIMESTAMP NOT NULL,
+                ""GrossRent"" DECIMAL(10,2) NOT NULL DEFAULT 0,
+                ""PaymentCycle"" VARCHAR(20) NOT NULL DEFAULT 'Monthly',
+                ""SecurityDeposit"" DECIMAL(10,2) NOT NULL DEFAULT 0,
+                ""SecurityDepositBalance"" DECIMAL(10,2) NOT NULL DEFAULT 0,
+                ""IsOnline"" BOOLEAN NOT NULL DEFAULT false,
+                ""HasAutopay"" BOOLEAN NOT NULL DEFAULT false,
+                ""IsActive"" BOOLEAN NOT NULL DEFAULT true,
+                ""ContractStartDate"" TIMESTAMP,
+                ""ContractEndDate"" TIMESTAMP,
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
+                ""UpdatedAt"" TIMESTAMP
+            );
+            
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_StorageContracts_ContractNumber"" ON ""StorageContracts"" (""ContractNumber"");
+            
+            CREATE TABLE IF NOT EXISTS ""StorageContractUsers"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""StorageContractId"" INTEGER NOT NULL,
+                ""UserId"" INTEGER NOT NULL,
+                ""IsPrimaryContractHolder"" BOOLEAN NOT NULL DEFAULT false,
+                ""AccessLevel"" VARCHAR(20) NOT NULL DEFAULT 'Full',
+                ""IsActive"" BOOLEAN NOT NULL DEFAULT true,
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
+                ""RemovedAt"" TIMESTAMP
+            );
+            
+            CREATE UNIQUE INDEX IF NOT EXISTS ""IX_StorageContractUsers_ContractId_UserId"" ON ""StorageContractUsers"" (""StorageContractId"", ""UserId"");";
+
+                await _context.Database.ExecuteSqlRawAsync(sql);
+
+                return Ok(new { success = true, message = "All storage tables created successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
         [HttpPost("reset-and-create-users-from-excel")]
         public async Task<IActionResult> ResetAndCreateUsersFromExcel([FromQuery] string key, IFormFile excelFile)
         {

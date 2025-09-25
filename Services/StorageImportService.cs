@@ -52,24 +52,35 @@ namespace AutumnRidgeUSA.Services
                     }
                     catch (Exception ex)
                     {
-                        result.Errors.Add($"Row {storageData.RowNumber}: {ex.Message}");
+                        var innerMsg = ex.InnerException?.Message ?? "No inner exception";
+                        result.Errors.Add($"Row {storageData.RowNumber}: {ex.Message} | Inner: {innerMsg}");
                         _logger.LogError(ex, "Error processing storage row {RowNumber}", storageData.RowNumber);
                     }
                 }
 
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    var innerMsg = ex.InnerException?.Message ?? "No inner exception";
+                    result.Errors.Add($"SaveChanges failed: {ex.Message} | Inner: {innerMsg}");
+                    _logger.LogError(ex, "Error saving changes");
+                }
 
-                result.Success = true;
-                result.Message = $"Successfully imported {result.SuccessCount} storage contracts";
+                result.Success = result.Errors.Count == 0;
+                result.Message = result.Success ? $"Successfully imported {result.SuccessCount} storage contracts" : "Import completed with errors";
                 result.TotalProcessed = parsedData.StorageData.Count;
                 result.ErrorCount = result.Errors.Count;
             }
             catch (Exception ex)
             {
+                var innerMsg = ex.InnerException?.Message ?? "No inner exception";
                 _logger.LogError(ex, "Error importing storage data from Excel");
                 result.Success = false;
                 result.Message = "Error processing Excel file";
-                result.Errors.Add(ex.Message);
+                result.Errors.Add($"{ex.Message} | Inner: {innerMsg}");
             }
 
             return result;
