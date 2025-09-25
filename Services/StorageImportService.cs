@@ -1,9 +1,9 @@
 ﻿// Services/StorageImportService.cs
 using Microsoft.EntityFrameworkCore;
 using AutumnRidgeUSA.Data;
+using AutumnRidgeUSA.Models;
 using AutumnRidgeUSA.Models.Storage;
 using AutumnRidgeUSA.Services.Helpers;
-using AutumnRidgeUSA.Models;
 
 namespace AutumnRidgeUSA.Services
 {
@@ -100,6 +100,7 @@ namespace AutumnRidgeUSA.Services
                 {
                     var row = xlRow as ClosedXML.Excel.IXLRow;
                     if (row == null) continue;
+                    var phoneData = ParsePhoneData(row, columnMap);
 
                     var storageData = new StorageData
                     {
@@ -114,11 +115,14 @@ namespace AutumnRidgeUSA.Services
                         IsOnline = ParseBool(GetExcelValue(row, columnMap, new[] { "online", "online access" })) ?? false,
                         HasAutopay = ParseBool(GetExcelValue(row, columnMap, new[] { "autopay", "auto pay", "automatic payment" })) ?? false,
 
-                        // User identification fields
+                        // User identification fields - handle semicolon-separated values
                         Email = GetExcelValue(row, columnMap, new[] { "email", "e-mail", "user email" })?.Trim(),
-                        FirstName = GetExcelValue(row, columnMap, new[] { "first name", "firstname", "fname" })?.Trim(),
-                        LastName = GetExcelValue(row, columnMap, new[] { "last name", "lastname", "lname" })?.Trim(),
-                        Phone = GetExcelValue(row, columnMap, new[] { "phone", "telephone", "phone number" })?.Trim(),
+                        FullName = GetExcelValue(row, columnMap, new[] { "name", "full name", "tenant name", "customer name" })?.Trim(),
+                        // Phone handling - support both combined and separate formats
+                        Phone = phoneData.Phone,
+                        PhoneType = phoneData.PhoneType,
+                        Phone2 = phoneData.Phone2,
+                        Phone2Type = phoneData.Phone2Type,
 
                         IsPrimaryHolder = ParseBool(GetExcelValue(row, columnMap, new[] { "primary", "primary holder", "main tenant" })) ?? true
                     };
@@ -137,6 +141,60 @@ namespace AutumnRidgeUSA.Services
         }
 
         private async Task ProcessStorageRecord(StorageData data, StorageImportResult result)
+        {
+            try
+            {
+                // Handle semicolon-separated values
+                var userIds = SplitBySemicolon(data.UnitId);
+                var fullNames = SplitBySemicolon(data.FullName);
+
+                // Ensure we have matching counts or handle mismatches
+                var maxCount = Math.Max(userIds.Count, fullNames.Count);
+
+                for (int i = 0; i < maxCount; i++)
+                {
+                    var currentUserId = i < userIds.Count ? userIds[i] : userIds.LastOrDefault();
+                    var currentFullName = i < fullNames.Count ? fullNames[i] : fullNames.LastOrDefault();
+
+                    if (string.IsNullOrEmpty(currentUserId))
+                    {
+                        result.Errors.Add($"Row {data.RowNumber}, Entry {i + 1}: User ID is required");
+                        continue;
+                    }
+
+                    // Parse the full name in "Last, First" format
+                    var (firstName, lastName) = ParseFullName(currentFullName);
+
+                    // Create a new data object for this specific entry
+                    var entryData = new StorageData
+                    {
+                        RowNumber = data.RowNumber,
+                        UnitId = currentUserId,
+                        UnitSize = data.UnitSize,
+                        MoveInDate = data.MoveInDate,
+                        GrossRent = data.GrossRent,
+                        PaymentCycle = data.PaymentCycle,
+                        SecurityDeposit = data.SecurityDeposit,
+                        SecurityDepositBalance = data.SecurityDepositBalance,
+                        IsOnline = data.IsOnline,
+                        HasAutopay = data.HasAutopay,
+                        Email = data.Email, // This might be shared or empty
+                        FirstName = firstName,
+                        LastName = lastName,
+                        Phone = data.Phone,
+                        IsPrimaryHolder = i == 0 // First person is primary
+                    };
+
+                    await ProcessSingleStorageEntry(entryData, result);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Errors.Add($"Row {data.RowNumber}: {ex.Message}");
+            }
+        }
+
+        private async Task ProcessSingleStorageEntry(StorageData data, StorageImportResult result)
         {
             if (string.IsNullOrEmpty(data.UnitId))
             {
@@ -232,7 +290,7 @@ namespace AutumnRidgeUSA.Services
             }
         }
 
-        private async Task<User> FindOrCreateUser(StorageData data)
+        private async Task<User?> FindOrCreateUser(StorageData data)
         {
             User? user = null;
 
@@ -251,6 +309,9 @@ namespace AutumnRidgeUSA.Services
                     FirstName = data.FirstName ?? "Storage",
                     LastName = data.LastName ?? "Client",
                     Phone = data.Phone,
+                    PhoneType = data.PhoneType,
+                    Phone2 = data.Phone2,
+                    Phone2Type = data.Phone2Type,
                     Role = "Client",
                     IsConfirmed = true,
                     UserId = await GenerateUniqueUserId(),
@@ -285,6 +346,141 @@ namespace AutumnRidgeUSA.Services
             } while (await _context.Users.AnyAsync(u => u.UserId == userId));
 
             return userId;
+        }
+
+        private List<string> SplitBySemicolon(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return new List<string>();
+
+            return value.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                       .Select(s => s.Trim())
+                       .Where(s => !string.IsNullOrEmpty(s))
+                       .ToList();
+        }
+
+        private (string firstName, string lastName) ParseFullName(string? fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+                return ("Unknown", "User");
+
+            var trimmed = fullName.Trim();
+
+            // Handle "Last, First" format
+            if (trimmed.Contains(','))
+            {
+                var parts = trimmed.Split(',', 2, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 2)
+                {
+                    var lastName = parts[0].Trim();
+                    var firstName = parts[1].Trim();
+                    return (firstName, lastName);
+                }
+            }
+
+            // Handle "First Last" format as fallback
+            var spaceParts = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (spaceParts.Length >= 2)
+            {
+                var firstName = spaceParts[0];
+                var lastName = string.Join(" ", spaceParts.Skip(1));
+                return (firstName, lastName);
+            }
+
+            // Single name - treat as first name
+            return (trimmed, "");
+        }
+
+        private PhoneData ParsePhoneData(ClosedXML.Excel.IXLRow row, Dictionary<string, int> columnMap)
+        {
+            var result = new PhoneData();
+
+            // Try to get phone data from combined format first
+            var combinedPhone = GetExcelValue(row, columnMap, new[] { "phone", "telephone", "phone number", "phone numbers" });
+
+            if (!string.IsNullOrEmpty(combinedPhone) && (combinedPhone.Contains("{") || combinedPhone.Contains(";")))
+            {
+                // Parse combined format like "(814) 310-1159 {C}; (814) 839-0135 {H}"
+                ParseCombinedPhoneFormat(combinedPhone, result);
+            }
+            else
+            {
+                // Try separate columns format
+                result.Phone = GetExcelValue(row, columnMap, new[] { "phone", "phone1", "phone number" })?.Trim();
+                result.PhoneType = ParsePhoneType(GetExcelValue(row, columnMap, new[] { "phone type", "phonetype", "phone1type", "phone_type" }));
+                result.Phone2 = GetExcelValue(row, columnMap, new[] { "phone2", "phone 2", "second phone" })?.Trim();
+                result.Phone2Type = ParsePhoneType(GetExcelValue(row, columnMap, new[] { "phone2type", "phone 2 type", "phone2_type", "second phone type" }));
+
+                // Clean up phone numbers (remove formatting but keep digits and basic characters)
+                if (!string.IsNullOrEmpty(result.Phone))
+                    result.Phone = CleanPhoneNumber(result.Phone);
+                if (!string.IsNullOrEmpty(result.Phone2))
+                    result.Phone2 = CleanPhoneNumber(result.Phone2);
+            }
+
+            return result;
+        }
+
+        private void ParseCombinedPhoneFormat(string phoneString, PhoneData result)
+        {
+            var phoneEntries = phoneString.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+            for (int i = 0; i < phoneEntries.Length && i < 2; i++)
+            {
+                var entry = phoneEntries[i].Trim();
+                var phoneNumber = ExtractPhoneNumber(entry);
+                var phoneType = ExtractPhoneTypeFromEntry(entry);
+
+                if (i == 0)
+                {
+                    result.Phone = phoneNumber;
+                    result.PhoneType = phoneType;
+                }
+                else
+                {
+                    result.Phone2 = phoneNumber;
+                    result.Phone2Type = phoneType;
+                }
+            }
+        }
+
+        private string ExtractPhoneNumber(string entry)
+        {
+            // Remove type indicators and clean up
+            var cleaned = entry;
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\{[CHW]\}", ""); // Remove {C}, {H}, {W}
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\([CHW]\)", ""); // Remove (C), (H), (W)
+            return CleanPhoneNumber(cleaned);
+        }
+
+        private string ExtractPhoneTypeFromEntry(string entry)
+        {
+            if (entry.Contains("{C}") || entry.Contains("(C)")) return "Cell";
+            if (entry.Contains("{H}") || entry.Contains("(H)")) return "Home";
+            if (entry.Contains("{W}") || entry.Contains("(W)")) return "Work";
+            return "Cell"; // Default assumption
+        }
+
+        private string ParsePhoneType(string? phoneType)
+        {
+            if (string.IsNullOrEmpty(phoneType)) return "Cell"; // Default
+
+            var lower = phoneType.ToLower().Trim();
+            return lower switch
+            {
+                "cell" or "mobile" or "c" => "Cell",
+                "home" or "h" => "Home",
+                "work" or "office" or "w" => "Work",
+                _ => "Cell"
+            };
+        }
+
+        private string CleanPhoneNumber(string phone)
+        {
+            if (string.IsNullOrEmpty(phone)) return phone;
+
+            // Keep the formatted phone number but remove extra whitespace
+            return phone.Trim();
         }
 
         private string? GetExcelValue(ClosedXML.Excel.IXLRow row, Dictionary<string, int> columnMap, string[] possibleNames)
@@ -360,11 +556,23 @@ namespace AutumnRidgeUSA.Services
         public bool IsOnline { get; set; }
         public bool HasAutopay { get; set; }
 
-        // User info
+        // User info - supports both individual and combined formats
         public string? Email { get; set; }
+        public string? FullName { get; set; }  // For "Last, First" format
         public string? FirstName { get; set; }
         public string? LastName { get; set; }
         public string? Phone { get; set; }
+        public string? PhoneType { get; set; }
+        public string? Phone2 { get; set; }
+        public string? Phone2Type { get; set; }
         public bool IsPrimaryHolder { get; set; } = true;
+    }
+
+    public class PhoneData
+    {
+        public string? Phone { get; set; }
+        public string? PhoneType { get; set; }
+        public string? Phone2 { get; set; }
+        public string? Phone2Type { get; set; }
     }
 }
