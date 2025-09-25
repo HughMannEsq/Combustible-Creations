@@ -33,7 +33,7 @@ namespace AutumnRidgeUSA.Services
             try
             {
                 using var stream = excelFile.OpenReadStream();
-                var parsedData = await ParseStorageExcelFile(stream);
+                var parsedData = ParseStorageExcelFile(stream);
 
                 if (!parsedData.IsValid)
                 {
@@ -75,7 +75,7 @@ namespace AutumnRidgeUSA.Services
             return result;
         }
 
-        private async Task<StorageParseResult> ParseStorageExcelFile(Stream stream)
+        private StorageParseResult ParseStorageExcelFile(Stream stream)
         {
             var result = new StorageParseResult();
 

@@ -89,6 +89,7 @@ namespace AutumnRidgeUSA.Pages.Admin
             }
         }
 
+
         // Convert User entity to Client view model
         private Client MapUserToClient(User user)
         {
@@ -136,6 +137,7 @@ namespace AutumnRidgeUSA.Pages.Admin
 
         // Storage contract handler for the modal
         public async Task<IActionResult> OnGetStorageContractAsync(string userId)
+        // Storage contract handler for the modal
         {
             try
             {
@@ -146,28 +148,37 @@ namespace AutumnRidgeUSA.Pages.Admin
                     return new JsonResult(new { success = false, message = "User not found." });
                 }
 
-                var contracts = await _context.StorageContracts
-                    .Where(sc => sc.UserId == user.Id) // Use the database ID (int), not the UserId string
-                    .OrderByDescending(sc => sc.CreatedAt)
-                    .Select(sc => new
+                var contractData = await _context.StorageContractUsers
+                    .Where(scu => scu.UserId == user.Id && scu.IsActive)
+                    .Include(scu => scu.StorageContract)
+                        .ThenInclude(sc => sc.StorageUnit)
+                    .OrderByDescending(scu => scu.StorageContract.CreatedAt)
+                    .Select(scu => new
                     {
-                        id = sc.Id,
-                        lockerId = sc.LockerId,
-                        securityDeposit = sc.SecurityDeposit,
-                        securityDepositReceived = sc.SecurityDepositReceived,
-                        monthlyPayment = sc.MonthlyPayment,
-                        paymentMethod = sc.PaymentMethod,
-                        contractStartDate = sc.ContractStartDate,
-                        contractEndDate = sc.ContractEndDate,
-                        isActive = sc.IsActive,
-                        createdAt = sc.CreatedAt,
-                        updatedAt = sc.UpdatedAt
+                        id = scu.StorageContract.Id,
+                        contractNumber = scu.StorageContract.ContractNumber,
+                        unitId = scu.StorageContract.StorageUnit.UnitId,
+                        unitSize = scu.StorageContract.StorageUnit.UnitSize,
+                        moveInDate = scu.StorageContract.MoveInDate,
+                        grossRent = scu.StorageContract.GrossRent,
+                        paymentCycle = scu.StorageContract.PaymentCycle,
+                        securityDeposit = scu.StorageContract.SecurityDeposit,
+                        securityDepositBalance = scu.StorageContract.SecurityDepositBalance,
+                        isOnline = scu.StorageContract.IsOnline,
+                        hasAutopay = scu.StorageContract.HasAutopay,
+                        contractStartDate = scu.StorageContract.ContractStartDate,
+                        contractEndDate = scu.StorageContract.ContractEndDate,
+                        isActive = scu.StorageContract.IsActive,
+                        isPrimaryHolder = scu.IsPrimaryContractHolder,
+                        accessLevel = scu.AccessLevel,
+                        createdAt = scu.StorageContract.CreatedAt,
+                        updatedAt = scu.StorageContract.UpdatedAt
                     })
                     .ToListAsync();
 
-                if (contracts.Any())
+                if (contractData.Any())
                 {
-                    return new JsonResult(new { success = true, contracts = contracts });
+                    return new JsonResult(new { success = true, contracts = contractData });
                 }
                 else
                 {
@@ -179,7 +190,7 @@ namespace AutumnRidgeUSA.Pages.Admin
                 _logger.LogError(ex, "Error fetching storage contracts for user {UserId}", userId);
                 return new JsonResult(new { success = false, message = "Error loading storage contracts." });
             }
-        }
+        } 
 
         // Cleanup expired temp signups
         public async Task<IActionResult> OnPostCleanupExpiredAsync()
