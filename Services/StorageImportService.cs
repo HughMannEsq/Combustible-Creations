@@ -314,9 +314,23 @@ namespace AutumnRidgeUSA.Services
             // If not found and we have name info, create new user
             if (user == null && (!string.IsNullOrEmpty(data.FirstName) || !string.IsNullOrEmpty(data.LastName)))
             {
+                // Generate unique email if none provided
+                var email = data.Email;
+                if (string.IsNullOrEmpty(email))
+                {
+                    email = $"storage.{Guid.NewGuid():N}@autumnridge.temp";
+                }
+
+                // Double-check this email doesn't exist
+                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+                if (existingUser != null)
+                {
+                    return existingUser; // Return existing user instead of trying to create duplicate
+                }
+
                 user = new User
                 {
-                    Email = data.Email ?? $"storage.{Guid.NewGuid():N}@autumnridge.temp",
+                    Email = email,
                     FirstName = data.FirstName ?? "Storage",
                     LastName = data.LastName ?? "Client",
                     Phone = data.Phone,
@@ -328,10 +342,11 @@ namespace AutumnRidgeUSA.Services
                     UserId = await GenerateUniqueUserId(),
                     CreatedAt = DateTime.UtcNow,
                     ConfirmedAt = DateTime.UtcNow,
-                    PasswordHash = "TEMP_STORAGE_IMPORT", // Temporary - admin should reset
+                    PasswordHash = "TEMP_STORAGE_IMPORT",
                     Salt = "TEMP_STORAGE_IMPORT"
                 };
                 _context.Users.Add(user);
+                await _context.SaveChangesAsync(); // Save immediately to avoid batch duplicate issues
             }
 
             return user;
