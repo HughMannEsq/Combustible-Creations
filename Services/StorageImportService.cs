@@ -490,10 +490,12 @@ namespace AutumnRidgeUSA.Services
         {
             if (string.IsNullOrEmpty(phone)) return phone;
 
-            // Keep the formatted phone number but remove extra whitespace
-            return phone.Trim();
-        }
+            // Keep only digits and basic formatting
+            var cleaned = System.Text.RegularExpressions.Regex.Replace(phone, @"[^0-9\-\(\)]", "");
 
+            // Limit to 15 characters to fit database constraint
+            return cleaned.Length > 15 ? cleaned.Substring(0, 15) : cleaned;
+        }
         private string? GetExcelValue(ClosedXML.Excel.IXLRow row, Dictionary<string, int> columnMap, string[] possibleNames)
         {
             foreach (var name in possibleNames)
