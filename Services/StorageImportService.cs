@@ -353,7 +353,7 @@ namespace AutumnRidgeUSA.Services
                 var numbers = random.Next(1000, 9999);
                 var letters = new string(Enumerable.Range(0, 3)
                     .Select(_ => (char)random.Next('A', 'Z' + 1)).ToArray());
-                userId = $"STG-{numbers}-{letters}";
+                userId = $"{numbers}-{letters}";  // Format: 1234-ABC (8 characters total)
             } while (await _context.Users.AnyAsync(u => u.UserId == userId));
 
             return userId;
