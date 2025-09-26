@@ -526,7 +526,29 @@ namespace AutumnRidgeUSA.Services
         private DateTime? ParseDate(string? value)
         {
             if (string.IsNullOrEmpty(value)) return null;
-            return DateTime.TryParse(value, out var date) ? date : null;
+
+            // Try parsing as regular date
+            if (DateTime.TryParse(value, out var date))
+            {
+                // Ensure the parsed date is treated as UTC
+                return DateTime.SpecifyKind(date, DateTimeKind.Utc);
+            }
+
+            // Try parsing as Excel serial date number
+            if (double.TryParse(value, out var serialDate))
+            {
+                try
+                {
+                    var excelDate = DateTime.FromOADate(serialDate);
+                    return DateTime.SpecifyKind(excelDate, DateTimeKind.Utc);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
+            return null;
         }
 
         private decimal ParseDecimal(string? value)
